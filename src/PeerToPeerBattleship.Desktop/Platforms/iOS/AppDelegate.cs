@@ -1,6 +1,6 @@
 ﻿using Foundation;
 
-namespace PeerToPeerBattleship.Desktop
+namespace PeerToPeerBattleship.Desktop.Platforms.iOS
 {
     [Register("AppDelegate")]
     public class AppDelegate : MauiUIApplicationDelegate

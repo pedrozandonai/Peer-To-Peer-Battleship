@@ -1,7 +1,7 @@
 ﻿using ObjCRuntime;
 using UIKit;
 
-namespace PeerToPeerBattleship.Desktop
+namespace PeerToPeerBattleship.Desktop.Platforms.MacCatalyst
 {
     public class Program
     {

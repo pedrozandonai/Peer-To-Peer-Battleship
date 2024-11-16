@@ -1,31 +1,48 @@
 ﻿@page "/"
 @using PeerToPeerBattleship.Desktop.Components.Integration
+@using PeerToPeerBattleship.Desktop.Components.Integration.CustomLogger.Abstraction
+@using PeerToPeerBattleship.Desktop.Components.Integration.Protocols
+@using Serilog
+@using System.ComponentModel.DataAnnotations
 
 <body>
     <h1>Batalha Naval Peer-to-Peer</h1>
-    <form>
-        <label>IP:</label>
-        <input type="text"><br><br>
-        <label>Porta:</label>
-        <input type="text"><br><br>
-        <input type="submit" value="Conectar">
+
+    <form @onsubmit="SendIpAndPort">
+        <label>Endereço IP:
+            <InputText @bind-Value="Ip" />
+        </label>
+        <label>Porta:
+            <InputNumber @bind-Value="Port" />
+        </label>
+        <div>
+            <button type="submit">Conectar</button>
+        </div>
     </form>
-    <button @onclick="CreateBackEndConnection">Testar conexão</button>
 </body>
 
 @code{
     private readonly IServiceProvider _serviceProvider;
+    private readonly ILogger _logger;
 
-    public Home(IServiceProvider serviceProvider)
+    [Required]
+    private string? Ip { get; set; }
+    [Required]
+    private int Port { get; set; }
+
+    public Home(IServiceProvider serviceProvider, IContextualLogger<Home> contextualLogger)
     {
         _serviceProvider = serviceProvider;
+        _logger = contextualLogger.Logger;
     }
 
-    public void CreateBackEndConnection()
+    public void SendIpAndPort()
     {
         var tcpConnection = _serviceProvider.GetService<TcpConnection>();
 
-        tcpConnection!.ConnectToBackEnd("Hello from Blazor Desktop");
+        var protocolMessage = Connect.CreateConnectionProtocol(Ip!, Port);
+
+        tcpConnection!.ConnectToBackEnd(protocolMessage);
     }
 }
 
