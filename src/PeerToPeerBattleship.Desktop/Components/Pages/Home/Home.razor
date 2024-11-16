@@ -1,0 +1,31 @@
+﻿@page "/"
+@using PeerToPeerBattleship.Desktop.Components.Integration
+
+<body>
+    <h1>Batalha Naval Peer-to-Peer</h1>
+    <form>
+        <label>IP:</label>
+        <input type="text"><br><br>
+        <label>Porta:</label>
+        <input type="text"><br><br>
+        <input type="submit" value="Conectar">
+    </form>
+    <button @onclick="CreateBackEndConnection">Testar conexão</button>
+</body>
+
+@code{
+    private readonly IServiceProvider _serviceProvider;
+
+    public Home(IServiceProvider serviceProvider)
+    {
+        _serviceProvider = serviceProvider;
+    }
+
+    public void CreateBackEndConnection()
+    {
+        var tcpConnection = _serviceProvider.GetService<TcpConnection>();
+
+        tcpConnection!.ConnectToBackEnd("Hello from Blazor Desktop");
+    }
+}
+

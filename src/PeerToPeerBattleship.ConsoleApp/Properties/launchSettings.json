@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "PeerToPeerBattleship.ConsoleApp": {
+      "commandName": "Project",
+      "commandLineArgs": "--show-logs"
+    }
+  }
+}
