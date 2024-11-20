@@ -79,11 +79,45 @@ namespace PeerToPeerBattleship.Core.Inputs
             return ipAddressInput!;
         }
 
-        public List<(int X, int Y)> ReadPositions(string inputMessage)
+        public (int X, int Y) ReadPositions(string inputMessage)
         {
-            string positionInput;
+            string? positionInput;
+            Console.Write(inputMessage);
 
-            throw new NotImplementedException();
+            try
+            {
+                positionInput = Console.ReadLine();
+
+                if (string.IsNullOrEmpty(positionInput))
+                {
+                    _logger.Error("Entrada inválida. A posição não pode ficar em branco.");
+                    return ReadPositions(inputMessage);
+                }
+
+                var parts = positionInput.Split(',');
+
+                if (parts.Length != 2 ||
+                    !int.TryParse(parts[0], out var x) ||
+                    !int.TryParse(parts[1], out var y))
+                {
+                    _logger.Error("Entrada inválida. Use o formato X,Y (exemplo: 5,5).");
+                    return ReadPositions(inputMessage);
+                }
+
+                if (x > 9 ||
+                    y > 9)
+                {
+                    _logger.Error("Entrada inválida. A posição não pode ultrapassar o tamanho da grade (9).");
+                    return ReadPositions(inputMessage);
+                }
+
+                return (x, y);
+            }
+            catch (Exception ex)
+            {
+                _logger.Error("Tipo de entrada inválida, tente novamente. {0}", ex.Message);
+                return ReadPositions(inputMessage);
+            }
         }
     }
 }

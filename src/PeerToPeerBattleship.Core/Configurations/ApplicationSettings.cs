@@ -2,8 +2,15 @@
 {
     public class ApplicationSettings
     {
-        public string AppName { get; set; }
-        public string Version { get; set; }
+        public string AppName { get; set; } = string.Empty;
+        public string Version { get; set; } = string.Empty;
         public bool GameTestMode { get; set; }
+        public bool PeerToPeerTestMode { get; set; }
+
+        public void VerifySettings()
+        {
+            if (GameTestMode == PeerToPeerTestMode)
+                throw new NotSupportedException("Não é possível ter o modo de teste de jogo e conexão ativos ao mesmo tempo.");
+        }
     }
 }

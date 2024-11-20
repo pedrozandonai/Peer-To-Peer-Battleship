@@ -5,14 +5,13 @@ using PeerToPeerBattleship.ConsoleApp.DependencyInjection;
 using PeerToPeerBattleship.Core.Configurations;
 using PeerToPeerBattleship.Core.CustomLogger;
 using PeerToPeerBattleship.Core.CustomLogger.Abstraction;
-using PeerToPeerBattleship.DesktopAppIntegration;
 using Serilog;
 
 namespace PeerToPeerBattleship.ConsoleApp
 {
     public class Program
     {
-        public static void Main(string[] args)
+        public static async Task Main(string[] args)
         {
             // Configurando o IConfiguration para carregar o appsettings.json
             var configuration = new ConfigurationBuilder()
@@ -34,8 +33,8 @@ namespace PeerToPeerBattleship.ConsoleApp
             
             try
             {
-                bool enableDesktopApp = args.Contains("--enable-desktop-app");
-                StartProgram(serviceProvider, logger, enableDesktopApp);
+                applicationSettings.VerifySettings();
+                await StartProgram(serviceProvider, logger);
             }
             catch (Exception ex)
             {
@@ -47,19 +46,12 @@ namespace PeerToPeerBattleship.ConsoleApp
             }
         }
 
-        private static void StartProgram(ServiceProvider serviceProvider, ILogger logger, bool enableDesktopApp)
+        private static async Task StartProgram(ServiceProvider serviceProvider, ILogger logger)
         {
             try
             {
-                if (enableDesktopApp)
-                {
-                    //Pega o serviço de TCP da integração com a aplicação desktop
-                    var tcpServerService = serviceProvider.GetService<TcpServer>();
-                    tcpServerService!.ConnectToDesktopApp();
-                }
-
                 var game = serviceProvider.GetService<IGame>();
-                game!.Create();
+                await game!.Create();
             }
             catch (Exception ex)
             {

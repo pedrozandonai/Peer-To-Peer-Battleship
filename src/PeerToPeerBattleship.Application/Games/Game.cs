@@ -97,13 +97,15 @@ namespace PeerToPeerBattleship.Application.Games
 
         private void GameLoop()
         {
+            if (!_applicationSettings.PeerToPeerTestMode)
+            {
+                var match = new Match(_sock.LocalMachineIP, _sock.RemoteMachineIp);
+                match.CreateUserBoard(_userInputHandler);
+            }
+
             while (true)
             {
-                var match = new Match();
-                match.DisplayBoard(match.UserBoard);
-                Thread.Sleep(10000);
-
-                string input = "a fazer ainda";
+                string input = Console.ReadLine()!;
                 if (!_applicationSettings.GameTestMode)
                 {
                     _sock.SendMessageAsync(input).Wait();

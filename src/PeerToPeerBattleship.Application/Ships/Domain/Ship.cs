@@ -3,12 +3,14 @@
     public class Ship
     {
         public string Name { get; }
+        public EShipType ShipType { get; }
         public int Size { get; }
         public List<(int X, int Y)> Positions { get; private set; }
         public HashSet<(int X, int Y)> Hits { get; private set; }
 
         public Ship(string name, int size)
         {
+            ShipType = GetShipTypeByName(name);
             Name = name;
             Size = size;
             Positions = [];
@@ -38,5 +40,17 @@
 
         // Verifica se o navio foi destruído
         public bool IsSunk => Hits.Count == Size;
+
+        public static EShipType GetShipTypeByName(string shipName)
+        {
+            return shipName switch
+            {
+                "Porta-aviões" => EShipType.AircraftCarrier,
+                "Encouraçado" => EShipType.Battleship,
+                "Cruzador" => EShipType.Cruiser,
+                "Destróier" => EShipType.Destroyer,
+                _ => throw new ArgumentException($"Nome de barco inválido: {shipName}")
+            };
+        }
     }
 }

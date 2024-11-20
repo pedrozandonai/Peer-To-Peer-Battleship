@@ -27,16 +27,23 @@ namespace PeerToPeerBattleship.Infraestructure.Networking
 
         public async Task StartServerAsync(short port)
         {
-            TcpListener listener = new TcpListener(IPAddress.Any, port);
-            listener.Start();
-            _logger.Information("Servidor iniciado na porta {0}. Aguardando por conexões...", port);
+            try
+            {
+                TcpListener listener = new TcpListener(IPAddress.Any, port);
+                listener.Start();
+                _logger.Information("Servidor iniciado na porta {0}. Aguardando por conexões...", port);
 
-            _client = await listener.AcceptTcpClientAsync();
-            RemoteMachineIp = ((IPEndPoint)_client.Client.RemoteEndPoint!).Address.ToString();
-            _logger.Information("Cliente conectado. Endereço IP: {0}", RemoteMachineIp);
+                _client = await listener.AcceptTcpClientAsync();
+                RemoteMachineIp = ((IPEndPoint)_client.Client.RemoteEndPoint!).Address.ToString();
+                _logger.Information("Cliente conectado. Endereço IP: {0}", RemoteMachineIp);
 
-            _stream = _client.GetStream();
-            _ = ReceiveMessagesAsync();
+                _stream = _client.GetStream();
+                _ = ReceiveMessagesAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogExceptionError("Ocorreu um erro ao tentar iniciar o servidor.", ex);
+            }
         }
 
         public async Task ConnectToServerAsync(string serverIp, short port)
