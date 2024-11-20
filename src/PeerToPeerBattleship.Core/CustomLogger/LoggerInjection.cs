@@ -19,6 +19,10 @@ namespace PeerToPeerBattleship.Core.CustomLogger
 
         public static ServiceCollection AddLogger(this ServiceCollection services)
         {
+            // Registra o Serilog como serviço
+            services.AddSingleton(Log.Logger);
+            
+            // Registra o logger contextual
             services.AddSingleton(typeof(IContextualLogger<>), typeof(ContextualLogger<>));
 
             return services;

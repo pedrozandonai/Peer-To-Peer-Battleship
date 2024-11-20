@@ -42,5 +42,8 @@ namespace PeerToPeerBattleship.Application.Boards.Domain
 
         // Verifica se todos os navios foram destruídos
         public bool AllShipsSunk => Ships.All(ship => ship.IsSunk);
+
+        // Método auxiliar para retornar a célula específica
+        public Ship? GetCell(int x, int y) => grid[x, y];
     }
 }

@@ -1,8 +1,8 @@
 ﻿namespace PeerToPeerBattleship.Application.Ships.Domain
 {
-    public abstract class Ship
+    public class Ship
     {
-        public string Name { get; } = string.Empty;
+        public string Name { get; }
         public int Size { get; }
         public List<(int X, int Y)> Positions { get; private set; }
         public HashSet<(int X, int Y)> Hits { get; private set; }
