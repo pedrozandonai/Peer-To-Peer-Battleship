@@ -1,21 +1,25 @@
 ﻿using PeerToPeerBattleship.Application.Boards.Domain;
 using PeerToPeerBattleship.Application.Ships.Domain;
+using PeerToPeerBattleship.Application.Ships.Model;
 using PeerToPeerBattleship.Core.Inputs.Abstractions;
+using System.Text.Json;
 
 namespace PeerToPeerBattleship.Application.Matches
 {
     public class Match
     {
         public Guid Id { get; set; }
+        public string IpTurn { get; set; } = string.Empty;
         public string? LocalMachineIp { get; set; }
         public string? RemoteMachineIp { get; set; }
-        public Board UserBoard { get; set; }
-        public Board EnemyBoard { get; set; }
-        public List<Ship> AvailableShips { get; set; }
+        public Board UserBoard { get; set; } = new();
+        public Board EnemyBoard { get; set; } = new();
+        public List<Ship> AvailableShips { get; set; } = [];
+        public IUserInputHandler? UserInputHandler { get; set; }
 
-        public Match(string localMachineIp, string remoteMachineIp)
+        private Match(string? localMachineIp, string? remoteMachineIp, IUserInputHandler userInputHandler)
         {
-            Id = new Guid();
+            Id = Guid.CreateVersion7();
             LocalMachineIp = localMachineIp;
             RemoteMachineIp = remoteMachineIp;
             AvailableShips =
@@ -27,269 +31,276 @@ namespace PeerToPeerBattleship.Application.Matches
                 new("Destróier", 2),
                 new("Destróier", 2)
             ];
+            UserInputHandler = userInputHandler;
         }
 
-        public void CreateMatchShips()
-        {
-            //UserShips =
-            //[
-            //    new("Porta-aviões", 5),
-            //    new("Encouraçado", 4),
-            //    new("Cruzador", 3),
-            //    new("Cruzador", 3),
-            //    new("Destróier", 2),
-            //    new("Destróier", 2)
-            //];
-        }
+        public static Match Create(string localMachineIp, string remoteMachineIp, IUserInputHandler userInputHandler)
+            => new(localMachineIp, remoteMachineIp, userInputHandler);
 
         public void CreateTestMatchBoards()
         {
-            //UserBoard = new Board();
+            UserBoard = new Board();
 
-            //var random = new Random();
-            //foreach (var ship in UserShips)
-            //{
-            //    bool placed = false;
+            var random = new Random();
+            foreach (var ship in AvailableShips)
+            {
+                bool placed = false;
 
-            //    while (!placed)
-            //    {
-            //        // Escolhe uma posição inicial aleatória
-            //        int startX = random.Next(0, 10);
-            //        int startY = random.Next(0, 10);
+                while (!placed)
+                {
+                    // Escolhe uma posição inicial aleatória
+                    int startX = random.Next(0, 10);
+                    int startY = random.Next(0, 10);
 
-            //        // Define a direção: 0 = horizontal, 1 = vertical
-            //        bool isHorizontal = random.Next(0, 2) == 0;
+                    // Define a direção: 0 = horizontal, 1 = vertical
+                    bool isHorizontal = random.Next(0, 2) == 0;
 
-            //        // Calcula as posições que o navio ocupará
-            //        var positions = Enumerable.Range(0, ship.Size)
-            //            .Select(i => isHorizontal
-            //                ? (X: startX, Y: startY + i) // Horizontal
-            //                : (X: startX + i, Y: startY)) // Vertical
-            //            .ToList();
+                    // Calcula as posições que o navio ocupará
+                    var positions = Enumerable.Range(0, ship.Size)
+                        .Select(i => isHorizontal
+                            ? (X: startX, Y: startY + i) // Horizontal
+                            : (X: startX + i, Y: startY)) // Vertical
+                        .ToList();
 
-            //        // Verifica se todas as posições são válidas e livres
-            //        if (positions.All(pos =>
-            //            pos.X >= 0 && pos.X < 10 &&
-            //            pos.Y >= 0 && pos.Y < 10 &&
-            //            UserBoard.GetCell(pos.X, pos.Y) == null))
-            //        {
-            //            // Posiciona o navio
-            //            UserBoard.PlaceShip(ship, positions);
-            //            placed = true;
-            //        }
-            //    }
-            //}
+                    // Verifica se todas as posições são válidas e livres
+                    if (positions.All(pos =>
+                        pos.X >= 0 && pos.X < 10 &&
+                        pos.Y >= 0 && pos.Y < 10 &&
+                        UserBoard.GetCell(pos.X, pos.Y) == null))
+                    {
+                        // Posiciona o navio
+                        UserBoard.PlaceShip(ship, positions);
+                        placed = true;
+                    }
+                }
+            }
         }
 
         public static void DisplayBoard(Board board)
         {
-            Console.WriteLine("   " + string.Join(" ", Enumerable.Range(0, 10))); // Cabeçalho das colunas
+            int cellWidth = 3; // Largura de cada célula
 
-            for (int x = 0; x < 10; x++)
+            // Linha superior (delimitador horizontal)
+            Console.WriteLine("   " + new string('-', 10 * cellWidth + 1));
+
+            // Linhas do tabuleiro
+            for (int y = 9; y >= 0; y--) // De cima (9) para baixo (0)
             {
-                Console.Write($"{x,2} "); // Índice da linha
-                for (int y = 0; y < 10; y++)
+                Console.Write($"{y,2} "); // Índice da linha (eixo Y)
+                for (int x = 0; x < 10; x++)
                 {
                     var cell = board.GetCell(x, y);
                     string displayChar = cell switch
                     {
-                        null => " ", // Vazio
+                        null => " ", // Célula vazia
                         Ship ship when ship.Hits.Contains((x, y)) => "X", // Navio atingido
                         Ship => "O", // Navio não atingido
                     };
 
-                    Console.Write($"|{displayChar}");
+                    Console.Write($"|{displayChar.PadLeft(cellWidth / 2).PadRight(cellWidth - 1)}");
                 }
                 Console.WriteLine("|");
             }
-            Console.WriteLine("   " + new string('-', 21)); // Linha inferior
+
+            // Linha inferior (delimitador horizontal)
+            Console.WriteLine("   " + new string('-', 10 * cellWidth + 1));
+
+            // Cabeçalho das colunas (eixo X)
+            Console.Write("   ");
+            for (int x = 0; x < 10; x++)
+            {
+                Console.Write(x.ToString().PadLeft(cellWidth / 2 + 1).PadRight(cellWidth));
+            }
+            Console.WriteLine();
         }
 
-        public void CreateUserBoard(IUserInputHandler userInputHandler)
+        public Board CreateUserBoard()
         {
-            UserBoard = new Board();
+            var userBoard = new Board();
 
             int count = 1;
             int selectedShipsCount = AvailableShips.Count;
             var indexedShips = new Dictionary<int, Ship>();
 
-            while(AvailableShips.Count != UserBoard.Ships.Count)
+            while(AvailableShips.Count != userBoard.Ships.Count)
             {
-                DisplayBoard(UserBoard);
+                DisplayBoard(userBoard);
 
-                Console.WriteLine("*------------------------------------------------------------------*");
+                string header = "*------------------------------------------------------------------*";
+                Console.WriteLine(header);
                 Console.WriteLine("|     Selecione um dos navios disponíveis para ser posicionado     |");
+
+                indexedShips.Clear(); // Limpa o dicionário a cada iteração.
+
                 foreach (var ship in AvailableShips)
                 {
                     if (ship.Positions.Count > 0) continue;
 
-                    //TODO: Arrumar a saída aqui:
-                    Console.WriteLine(string.Format("{0} - {1}. (Tamanho do navio: {2})", count, ship.Name, ship.Size));
-                    indexedShips.Add(count, ship);
+                    // Formata a linha para garantir alinhamento.
+                    string shipSelection = $"{count} - {ship.Name}. (Tamanho do navio: {ship.Size})";
+                    string formattedLine = $"| {shipSelection.PadRight(header.Length - 3)}|"; // Ajusta para caber dentro do tamanho da linha.
 
+                    Console.WriteLine(formattedLine);
+                    indexedShips.Add(count, ship);
                     count++;
                 }
-                Console.WriteLine("*------------------------------------------------------------------*");
-                var selectedShip = userInputHandler.ReadShort("Selecione dentre as opções disponíveis: ");
 
+                Console.WriteLine(header);
+
+                var selectedShip = UserInputHandler!.ReadShort("    Selecione dentre as opções disponíveis: ");
                 if (!indexedShips.ContainsKey(selectedShip))
                 {
                     Console.WriteLine("Valor inserido não corresponde a nenhuma das opções disponíveis, por favor, selecione uma opção válida.");
                     continue;
                 }
 
-                //Acho que não vai precisar dessa parte
-                //var axisPosition = PositionAxisSelectedShip(userInputHandler);
-                //if (axisPosition == 9) continue;
-
-                var shipSelectedPosition = new List<(int X, int Y)>();
+                (int X, int Y) shipSelectedPosition;
+                short axisPosition;
+                List<(int X, int Y)> shipFinalPositions;
 
                 while (true)
                 {
-                    shipSelectedPosition = PositionSelectedShip(userInputHandler);
+                    shipSelectedPosition = PositionSelectedShip();
+                    axisPosition = PositionAxisSelectedShip();
+                    shipFinalPositions = GeneratePositions(shipSelectedPosition, axisPosition, indexedShips[selectedShip].Size);
 
-                    if (ShipPositionIsValid(shipSelectedPosition, indexedShips[selectedShip].Size)) break;
+                    if (ShipPositionIsValid(shipFinalPositions, axisPosition, indexedShips[selectedShip].Size)) break;
                     
                     Console.WriteLine("Posição inválida, por favor, digite a posição novamente.");
                 }
 
-                UserBoard.PlaceShip(indexedShips[selectedShip], shipSelectedPosition);
+                userBoard.PlaceShip(indexedShips[selectedShip], shipFinalPositions);
+                Console.WriteLine();
                 Console.WriteLine(string.Format("Navio {0} adicionado com sucesso ao tabuleiro!", indexedShips[selectedShip].Name));
+                Console.WriteLine();
                 selectedShipsCount--;
                 count = 1;
-                indexedShips = [];
             }
+
+            return userBoard;
         }
 
-        public short PositionAxisSelectedShip(IUserInputHandler userInputHandler)
+        public short PositionAxisSelectedShip()
         {
             Console.WriteLine("*------------------------------------------------------------------*");
             Console.WriteLine("|      Deseja posicionar o navio na vertical ou na horizontal?     |");
             Console.WriteLine("|                      1 - Vertical                                |");
             Console.WriteLine("|                      2 - Horizontal                              |");
-            Console.WriteLine("|                      9 - Sair                                    |");
             Console.WriteLine("*------------------------------------------------------------------*");
-            var selectedAxis = userInputHandler.ReadShort("Selecione dentre as opções disponíveis: ");
+            var selectedAxis = UserInputHandler!.ReadShort("    Selecione dentre as opções disponíveis: ");
 
-            if (selectedAxis != 1 ||
-                selectedAxis != 2 ||
-                selectedAxis != 9)
+            if (selectedAxis != 1 &&
+                selectedAxis != 2)
             {
                 Console.WriteLine("Orientação inválida, por favor, selecione uma das opções ou aperte 9 para sair do menu.");
-                return PositionAxisSelectedShip(userInputHandler);
+                return PositionAxisSelectedShip();
             }
 
             return selectedAxis;
         }
 
-        public List<(int X, int Y)> PositionSelectedShip(IUserInputHandler userInputHandler)
+        public (int X, int Y) PositionSelectedShip()
         {
-            Console.WriteLine("*-----------------------------------------------------------------------------*");
-            Console.WriteLine("|   Escreva a primeira e a última coordenada de onde deseja inserir o navio   |");
-            Console.WriteLine("|                                                                             |");
-            Console.WriteLine("|   Exemplo:                                                                  |");
-            Console.WriteLine("|       1 - Digite a coordenada inicial do seu navio: 5,5                     |");
-            Console.WriteLine("|       2 - Digite a coordenada final do seu navio: 5,9                       |");
-            Console.WriteLine("*-----------------------------------------------------------------------------*");
+            Console.WriteLine("*------------------------------------------------------------------*");
+            Console.WriteLine("|   Escreva a primeira coordenada de onde deseja inserir o navio   |");
+            Console.WriteLine("|                                                                  |");
+            Console.WriteLine("|   Exemplo:                                                       |");
+            Console.WriteLine("|       Digite a coordenada inicial do seu navio: 5,5              |");
+            Console.WriteLine("*------------------------------------------------------------------*");
 
-            var shipPositions = new List<(int X, int Y)>();
-
-            try
-            {
-                var startPosition = userInputHandler.ReadPositions("Digite a coordenada inicial do seu navio (formato X,Y): ");
-                var endPosition = userInputHandler.ReadPositions("Digite a coordenada final do seu navio (formato X,Y): ");
-                var positions = GeneratePositions(startPosition, endPosition);
-
-                shipPositions.AddRange(positions);
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Erro: {ex.Message}. Por favor, tente novamente.");
-                return PositionSelectedShip(userInputHandler);
-            }
-
-            return shipPositions;
+            var startPosition = UserInputHandler!.ReadPositions("    Digite a coordenada inicial do seu navio (formato X,Y): ");
+            
+            return startPosition;
         }
 
-        private List<(int X, int Y)> GeneratePositions((int X, int Y) start, (int X, int Y) end)
+        private static List<(int X, int Y)> GeneratePositions((int X, int Y) start, short axisPosition, int shipSize)
         {
             var positions = new List<(int X, int Y)>();
 
-            if (start.X != end.X && start.Y != end.Y)
-                throw new InvalidOperationException("Os navios devem ser posicionados horizontalmente ou verticalmente.");
+            // Validação do tamanho do navio.
+            if (shipSize <= 0)
+                throw new ArgumentException("O tamanho do navio deve ser maior que zero.", nameof(shipSize));
 
-            if (start.X == end.X)
+            // Definição do deslocamento com base no eixo.
+            if (axisPosition == 1)
             {
-                // Horizontal ship placement.
-                for (int y = Math.Min(start.Y, end.Y); y <= Math.Max(start.Y, end.Y); y++)
+                // Colocação horizontal (eixo Y varia).
+                for (int i = 0; i < shipSize; i++)
                 {
-                    positions.Add((start.X, y));
+                    positions.Add((start.X, start.Y + i));
+                }
+            }
+            else if (axisPosition == 2)
+            {
+                // Colocação vertical (eixo X varia).
+                for (int i = 0; i < shipSize; i++)
+                {
+                    positions.Add((start.X + i, start.Y));
                 }
             }
             else
             {
-                // Vertical ship placement.
-                for (int x = Math.Min(start.X, end.X); x <= Math.Max(start.X, end.X); x++)
-                {
-                    positions.Add((x, start.Y));
-                }
+                throw new ArgumentException("O eixo deve ser 1 (horizontal) ou 2 (vertical).", nameof(axisPosition));
             }
 
             return positions;
         }
 
-        private bool ShipPositionIsValid(List<(int X, int Y)> shipPositions, int shipLength)
+        private static bool ShipPositionIsValid(List<(int X, int Y)> shipPositions, short axisPosition, int shipLength)
         {
+            // Validação básica do tamanho do navio.
             if (shipPositions.Count != shipLength)
                 return false; // O tamanho do navio não corresponde ao número de posições fornecidas.
 
-            // Verifica se as posições formam uma linha horizontal ou vertical.
-            bool isHorizontal = true;
-            bool isVertical = true;
+            // Verifica se o eixo informado é válido.
+            if (axisPosition != 1 && axisPosition != 2)
+                throw new ArgumentException("O eixo deve ser 1 (horizontal) ou 2 (vertical).", nameof(axisPosition));
 
-            // Valores iniciais para comparação.
-            int xFirstPosition = shipPositions[0].X;
-            int yFirstPosition = shipPositions[0].Y;
+            // Determinação inicial de alinhamento.
+            bool isHorizontal = axisPosition == 1;
+            bool isVertical = axisPosition == 2;
 
-            // Verifica consistência das posições.
-            foreach (var shipPosition in shipPositions)
+            // Valores iniciais para verificação.
+            int fixedCoordinate = isHorizontal ? shipPositions[0].X : shipPositions[0].Y;
+
+            // Verifica consistência do alinhamento e continuidade.
+            var variableCoordinates = isHorizontal
+                ? shipPositions.Select(pos => pos.Y).OrderBy(c => c).ToArray()
+                : shipPositions.Select(pos => pos.X).OrderBy(c => c).ToArray();
+
+            foreach (var position in shipPositions)
             {
-                if (shipPosition.Y != yFirstPosition)
-                    isHorizontal = false;
-                if (shipPosition.X != xFirstPosition)
-                    isVertical = false;
-
-                // Se não for nem horizontal nem vertical, já é inválido.
-                if (!isHorizontal && !isVertical)
-                    return false;
-            }
-
-            if (isHorizontal)
-            {
-                // Ordena as posições para verificar continuidade.
-                var xPositions = shipPositions.Select(pos => pos.X).OrderBy(x => x).ToArray();
-                for (int i = 1; i < xPositions.Length; i++)
+                if ((isHorizontal && position.X != fixedCoordinate) ||
+                    (isVertical && position.Y != fixedCoordinate))
                 {
-                    if (xPositions[i] != xPositions[i - 1] + 1)
-                        return false; // Não está em sequência.
+                    return false; // Não está alinhado ao eixo indicado.
                 }
             }
-            else if (isVertical)
+
+            // Valida continuidade das posições.
+            for (int i = 1; i < variableCoordinates.Length; i++)
             {
-                // Ordena as posições para verificar continuidade.
-                var yPositions = shipPositions.Select(pos => pos.Y).OrderBy(y => y).ToArray();
-                for (int i = 1; i < yPositions.Length; i++)
-                {
-                    if (yPositions[i] != yPositions[i - 1] + 1)
-                        return false; // Não está em sequência.
-                }
-            }
-            else
-            {
-                return false; // Não é horizontal nem vertical.
+                if (variableCoordinates[i] != variableCoordinates[i - 1] + 1)
+                    return false; // As posições não estão em sequência.
             }
 
             return true; // Todas as validações passaram.
+        }
+
+        public async Task<string> SerializeShipsDto(List<Ship> ships)
+        {
+            List<ShipDto> shipsDtos = new List<ShipDto>();
+            foreach (var ship in ships)
+            {
+                shipsDtos.Add(ship.CreateShipDto());
+            }
+
+            using var memoryStream = new MemoryStream();
+            await JsonSerializer.SerializeAsync(memoryStream, new ShipsDto(shipsDtos), cancellationToken: CancellationToken.None);
+
+            memoryStream.Seek(0, SeekOrigin.Begin); // Reinicia a posição do fluxo para leitura.
+            using var reader = new StreamReader(memoryStream);
+            return await reader.ReadToEndAsync();
         }
     }
 }

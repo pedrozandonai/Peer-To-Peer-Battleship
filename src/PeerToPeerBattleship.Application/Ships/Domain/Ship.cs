@@ -1,4 +1,7 @@
-﻿namespace PeerToPeerBattleship.Application.Ships.Domain
+﻿using PeerToPeerBattleship.Application.Ships.Model;
+using PeerToPeerBattleship.Core.Helpers;
+
+namespace PeerToPeerBattleship.Application.Ships.Domain
 {
     public class Ship
     {
@@ -52,5 +55,10 @@
                 _ => throw new ArgumentException($"Nome de barco inválido: {shipName}")
             };
         }
+        public ShipDto CreateShipDto()
+            => new ShipDto(
+                Name.RemoveAccent().ToUpper(),
+                Positions.Select(position => new List<int> { position.X, position.Y }).ToList()
+            );
     }
 }
