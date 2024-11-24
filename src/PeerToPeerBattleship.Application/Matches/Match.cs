@@ -122,6 +122,70 @@ namespace PeerToPeerBattleship.Application.Matches
             Console.WriteLine();
         }
 
+        public static void DisplayBoards(Board userBoard, Board enemyBoard)
+        {
+            int cellWidth = 3; // Largura de cada célula
+
+            // Linha superior (delimitador horizontal)
+            Console.WriteLine("   " + new string('-', 10 * cellWidth + 1) + "   " + new string('-', 10 * cellWidth + 1));
+
+            // Linhas dos tabuleiros
+            for (int y = 9; y >= 0; y--) // De cima (9) para baixo (0)
+            {
+                // Exibe o índice da linha (eixo Y) e o tabuleiro do usuário
+                Console.Write($"{y,2} ");
+                for (int x = 0; x < 10; x++)
+                {
+                    var cell = userBoard.GetCell(x, y);
+                    string displayChar = cell switch
+                    {
+                        Ship ship when ship.Hits.Contains((x, y)) => "X", // Tiro acertado no próprio tabuleiro
+                        Ship => "O", // Tiro não acertado no próprio tabuleiro
+                        _ => " ", // Para células vazias
+                    };
+
+                    Console.Write($"|{displayChar.PadLeft(cellWidth / 2).PadRight(cellWidth - 1)}");
+                }
+
+                // Espaço entre os tabuleiros
+                Console.Write("   ");
+
+                // Exibe o tabuleiro do inimigo
+                for (int x = 0; x < 10; x++)
+                {
+                    // Se o inimigo foi atingido ou se o usuário fez um tiro naquela posição
+                    string displayChar = enemyBoard.ShotsFired.Contains((x, y))
+                        ? (enemyBoard.GetCell(x, y) != null ? "X" : "O") // Tiro realizado
+                        : " "; // Nenhum tiro realizado nesse lugar
+
+                    Console.Write($"|{displayChar.PadLeft(cellWidth / 2).PadRight(cellWidth - 1)}");
+                }
+
+                Console.WriteLine("|");
+            }
+
+            // Linha inferior (delimitador horizontal)
+            Console.WriteLine("   " + new string('-', 10 * cellWidth + 1) + "   " + new string('-', 10 * cellWidth + 1));
+
+            // Cabeçalho das colunas (eixo X) para o tabuleiro do usuário
+            Console.Write("   ");
+            for (int x = 0; x < 10; x++)
+            {
+                Console.Write(x.ToString().PadLeft(cellWidth / 2 + 1).PadRight(cellWidth));
+            }
+
+            // Espaço entre os cabeçalhos dos tabuleiros
+            Console.Write("   ");
+
+            // Cabeçalho das colunas (eixo X) para o tabuleiro do inimigo
+            for (int x = 0; x < 10; x++)
+            {
+                Console.Write(x.ToString().PadLeft(cellWidth / 2 + 1).PadRight(cellWidth));
+            }
+
+            Console.WriteLine();
+        }
+
         public Board ShipsCreationMethod()
         {
             string header = "*------------------------------------------------------------------*";
@@ -368,7 +432,6 @@ namespace PeerToPeerBattleship.Application.Matches
             if (File.Exists(filePath)) File.Delete(filePath);
 
             File.WriteAllText(filePath, jsonContent);
-            Console.WriteLine($"Arquivo da partida salvo em: {filePath}.");
         }
 
         public static Match LoadFromFile(string filePath)

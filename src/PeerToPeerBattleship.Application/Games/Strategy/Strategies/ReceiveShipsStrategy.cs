@@ -31,8 +31,6 @@ namespace PeerToPeerBattleship.Application.Games.Strategy.Strategies
 
                 gameMatch.SaveToFile();
 
-                gameMatch.SaveToFile();
-
                 return gameMatch;
             }
             catch (Exception ex)

@@ -168,6 +168,7 @@ namespace PeerToPeerBattleship.Application.Games
                 {
                     if (Match.IpTurn.Equals(Match.LocalMachineIp))
                     {
+                        Match.DisplayBoards(Match.UserBoard, Match.EnemyBoard);
                         var attackPosition = Match.AttackEnemyShip();
                         Match.EnemyBoard.Attack(attackPosition.X, attackPosition.Y);
 

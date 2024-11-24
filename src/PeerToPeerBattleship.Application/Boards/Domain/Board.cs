@@ -9,6 +9,8 @@ namespace PeerToPeerBattleship.Application.Boards.Domain
         // Lista de navios posicionados
         public List<Ship> Ships { get; } = [];
 
+        public List<(int X, int Y)> ShotsFired { get; } = new List<(int X, int Y)>();
+
         // Posiciona um navio no tabuleiro
         public void PlaceShip(Ship ship, IEnumerable<(int X, int Y)> positions)
         {
@@ -29,6 +31,9 @@ namespace PeerToPeerBattleship.Application.Boards.Domain
         {
             if (x < 0 || x >= 10 || y < 0 || y >= 10)
                 throw new ArgumentOutOfRangeException("Coordenadas fora dos limites do tabuleiro.");
+
+            // Registra o tiro
+            ShotsFired.Add((x, y));
 
             var ship = GetCell(x, y);
             if (ship != null)

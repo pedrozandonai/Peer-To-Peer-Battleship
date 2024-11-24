@@ -26,7 +26,7 @@ namespace PeerToPeerBattleship.Application.Games.Strategy.Strategies
             int x = int.Parse(message[0].ToString());
             int y = int.Parse(message[1].ToString());
 
-            gameMatch.UserBoard.Attack(x, y);
+            Console.WriteLine(gameMatch.UserBoard.Attack(x, y));
 
             if (gameMatch.UserBoard.AllShipsSunk)
             {
