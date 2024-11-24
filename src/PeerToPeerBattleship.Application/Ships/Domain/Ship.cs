@@ -64,12 +64,13 @@ namespace PeerToPeerBattleship.Application.Ships.Domain
 
         public static List<Ship> DeserializeShips(string json)
         {
-            // Define a classe auxiliar para mapear o JSON
+            // Desserializa diretamente a lista de ShipDto
             var shipDtos = JsonSerializer.Deserialize<List<ShipDto>>(json);
 
-            if (shipDtos == null)
-                throw new InvalidOperationException("Failed to deserialize JSON.");
+            if (shipDtos == null || !shipDtos.Any())
+                throw new InvalidOperationException("Failed to deserialize JSON or empty ships list.");
 
+            // Converte os DTOs para objetos Ship
             var ships = shipDtos.Select(dto =>
             {
                 var ship = new Ship(GetShipName(dto.Tipo), dto.Posicoes.Count);

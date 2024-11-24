@@ -333,14 +333,12 @@ namespace PeerToPeerBattleship.Application.Matches
 
         public async Task<string> SerializeShipsDto(List<Ship> ships, CancellationToken cancellationToken)
         {
-            List<ShipDto> shipsDtos = new List<ShipDto>();
-            foreach (var ship in ships)
-            {
-                shipsDtos.Add(ship.CreateShipDto());
-            }
+            // Converte a lista de objetos Ship para ShipDto
+            List<ShipDto> shipsDtos = ships.Select(ship => ship.CreateShipDto()).ToList();
 
+            // Serializa diretamente a lista de ShipDto
             using var memoryStream = new MemoryStream();
-            await JsonSerializer.SerializeAsync(memoryStream, new ShipsDto(shipsDtos), cancellationToken: cancellationToken);
+            await JsonSerializer.SerializeAsync(memoryStream, shipsDtos, cancellationToken: cancellationToken);
 
             memoryStream.Seek(0, SeekOrigin.Begin);
             using var reader = new StreamReader(memoryStream);

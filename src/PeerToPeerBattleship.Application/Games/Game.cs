@@ -213,9 +213,9 @@ namespace PeerToPeerBattleship.Application.Games
 
                 try
                 {
-                    var shipsDto = JsonSerializer.Deserialize<ShipsDto>(message);
+                    var shipsDto = JsonSerializer.Deserialize<List<ShipDto>>(message);
                     if (shipsDto != null
-                        && shipsDto.Ships?.Any() == true)
+                        && shipsDto.Any() == true)
                     {
                         strategy = new ReceiveShipsStrategy(_logger);
                     }
