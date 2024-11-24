@@ -1,5 +1,6 @@
 ﻿using PeerToPeerBattleship.Application.Ships.Model;
 using PeerToPeerBattleship.Core.Helpers;
+using System.Text.Json;
 
 namespace PeerToPeerBattleship.Application.Ships.Domain
 {
@@ -55,10 +56,40 @@ namespace PeerToPeerBattleship.Application.Ships.Domain
                 _ => throw new ArgumentException($"Nome de barco inválido: {shipName}")
             };
         }
+
         public ShipDto CreateShipDto()
-            => new ShipDto(
+            => new(
                 Name.RemoveAccent().ToUpper(),
-                Positions.Select(position => new List<int> { position.X, position.Y }).ToList()
-            );
+                Positions.Select(position => new List<int> { position.X, position.Y }).ToList());
+
+        public static List<Ship> DeserializeShips(string json)
+        {
+            // Define a classe auxiliar para mapear o JSON
+            var shipDtos = JsonSerializer.Deserialize<List<ShipDto>>(json);
+
+            if (shipDtos == null)
+                throw new InvalidOperationException("Failed to deserialize JSON.");
+
+            var ships = shipDtos.Select(dto =>
+            {
+                var ship = new Ship(GetShipName(dto.Tipo), dto.Posicoes.Count);
+                ship.Place(dto.Posicoes.Select(pos => (pos[0], pos[1])));
+                return ship;
+            }).ToList();
+
+            return ships;
+        }
+
+        private static string GetShipName(string tipo)
+        {
+            return tipo switch
+            {
+                "porta-avioes" => "Porta-aviões",
+                "encouracado" => "Encouraçado",
+                "cruzador" => "Cruzador",
+                "destroier" => "Destróier",
+                _ => throw new ArgumentException($"Tipo de navio inválido: {tipo}")
+            };
+        }
     }
 }

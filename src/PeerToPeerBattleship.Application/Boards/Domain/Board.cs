@@ -30,7 +30,7 @@ namespace PeerToPeerBattleship.Application.Boards.Domain
             if (x < 0 || x >= 10 || y < 0 || y >= 10)
                 throw new ArgumentOutOfRangeException("Coordenadas fora dos limites do tabuleiro.");
 
-            var ship = grid[x, y];
+            var ship = GetCell(x, y);
             if (ship != null)
             {
                 if (ship.TakeHit(x, y))

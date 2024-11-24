@@ -2,13 +2,13 @@
 {
     public class ShipDto
     {
-        public string Type { get; set; }
-        public List<List<int>> Positions { get; set; }
+        public string Tipo { get; set; }
+        public List<List<int>> Posicoes { get; set; }
 
         public ShipDto(string type, List<List<int>> positions)
         {
-            Type = type;
-            Positions = positions;
+            Tipo = type;
+            Posicoes = positions;
         }
     }
 }

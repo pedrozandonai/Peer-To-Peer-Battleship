@@ -14,10 +14,13 @@ namespace PeerToPeerBattleship.Application.Matches
         public string? RemoteMachineIp { get; set; }
         public Board UserBoard { get; set; } = new();
         public Board EnemyBoard { get; set; } = new();
-        public List<Ship> AvailableShips { get; set; } = [];
         public IUserInputHandler? UserInputHandler { get; set; }
+        public bool IsMatchOver { get; set; }
+        public DateTime CreationDateTime { get; set; }
+        public string MatchWinnerIp { get; set; }
+        private List<Ship> AvailableShips { get; set; } = [];
 
-        private Match(string? localMachineIp, string? remoteMachineIp, IUserInputHandler userInputHandler)
+        private Match(string? localMachineIp, string? remoteMachineIp, IUserInputHandler userInputHandler, bool isMatchOver)
         {
             Id = Guid.CreateVersion7();
             LocalMachineIp = localMachineIp;
@@ -32,12 +35,14 @@ namespace PeerToPeerBattleship.Application.Matches
                 new("Destróier", 2)
             ];
             UserInputHandler = userInputHandler;
+            IsMatchOver = isMatchOver;
+            CreationDateTime = DateTime.Now;
         }
 
         public static Match Create(string localMachineIp, string remoteMachineIp, IUserInputHandler userInputHandler)
-            => new(localMachineIp, remoteMachineIp, userInputHandler);
+            => new(localMachineIp, remoteMachineIp, userInputHandler, false);
 
-        public void CreateTestMatchBoards()
+        public Board GenerateRandomPositions()
         {
             UserBoard = new Board();
 
@@ -74,6 +79,8 @@ namespace PeerToPeerBattleship.Application.Matches
                     }
                 }
             }
+
+            return UserBoard;
         }
 
         public static void DisplayBoard(Board board)
@@ -114,17 +121,43 @@ namespace PeerToPeerBattleship.Application.Matches
             Console.WriteLine();
         }
 
+        public Board ShipsCreationMethod()
+        {
+            string header = "*------------------------------------------------------------------*";
+
+            Console.WriteLine(header);
+            Console.WriteLine("|               Como você deseja criar os navios?                  |");
+            Console.WriteLine("|                   1 - Gerar aleatoriamente                       |");
+            Console.WriteLine("|                   2 - Escolher as posições                       |");
+            Console.WriteLine(header);
+            var creationMethod = UserInputHandler!.ReadShort("Digite a sua opção: ");
+
+
+            switch(creationMethod)
+            {
+                case 1:
+                    return GenerateRandomPositions();
+
+                case 2:
+                    return CreateUserBoard();
+
+                default:
+                    Console.WriteLine("Opção não reconhecida pelo programa...");
+                    return ShipsCreationMethod();
+            }
+        }
+
         public Board CreateUserBoard()
         {
-            var userBoard = new Board();
+            UserBoard = new Board();
 
             int count = 1;
             int selectedShipsCount = AvailableShips.Count;
             var indexedShips = new Dictionary<int, Ship>();
 
-            while(AvailableShips.Count != userBoard.Ships.Count)
+            while(AvailableShips.Count != UserBoard.Ships.Count)
             {
-                DisplayBoard(userBoard);
+                DisplayBoard(UserBoard);
 
                 string header = "*------------------------------------------------------------------*";
                 Console.WriteLine(header);
@@ -169,7 +202,7 @@ namespace PeerToPeerBattleship.Application.Matches
                     Console.WriteLine("Posição inválida, por favor, digite a posição novamente.");
                 }
 
-                userBoard.PlaceShip(indexedShips[selectedShip], shipFinalPositions);
+                UserBoard.PlaceShip(indexedShips[selectedShip], shipFinalPositions);
                 Console.WriteLine();
                 Console.WriteLine(string.Format("Navio {0} adicionado com sucesso ao tabuleiro!", indexedShips[selectedShip].Name));
                 Console.WriteLine();
@@ -177,7 +210,7 @@ namespace PeerToPeerBattleship.Application.Matches
                 count = 1;
             }
 
-            return userBoard;
+            return UserBoard;
         }
 
         public short PositionAxisSelectedShip()
@@ -287,6 +320,16 @@ namespace PeerToPeerBattleship.Application.Matches
             return true; // Todas as validações passaram.
         }
 
+        public (int X, int Y) AttackEnemyShip()
+        {
+            Console.WriteLine("*------------------------------------------------------------------*");
+            Console.WriteLine("|       Digite a posição que deseja atacar na grade do inimigo     |");
+            Console.WriteLine("*------------------------------------------------------------------*");
+            var attackPosition = UserInputHandler!.ReadPositions("    Digite a coordenada (formato X,Y): ");
+
+            return attackPosition;
+        }
+
         public async Task<string> SerializeShipsDto(List<Ship> ships)
         {
             List<ShipDto> shipsDtos = new List<ShipDto>();
@@ -298,9 +341,44 @@ namespace PeerToPeerBattleship.Application.Matches
             using var memoryStream = new MemoryStream();
             await JsonSerializer.SerializeAsync(memoryStream, new ShipsDto(shipsDtos), cancellationToken: CancellationToken.None);
 
-            memoryStream.Seek(0, SeekOrigin.Begin); // Reinicia a posição do fluxo para leitura.
+            memoryStream.Seek(0, SeekOrigin.Begin);
             using var reader = new StreamReader(memoryStream);
             return await reader.ReadToEndAsync();
+        }
+
+        public void SaveToFile()
+        {
+            if (string.IsNullOrEmpty(RemoteMachineIp))
+            {
+                throw new InvalidOperationException("O endereço remoto não pode estár em branco ou ser nulo durante a criação do arquivo da partida.");
+            }
+
+            string documentsPath = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+            string folderPath = Path.Combine(documentsPath, "PeerToPeerBattleShip");
+
+            Directory.CreateDirectory(folderPath);
+
+            string fileName = $"{CreationDateTime:yyyy-MM-dd_HH-mm-ss}_{RemoteMachineIp}.txt";
+            string filePath = Path.Combine(folderPath, fileName);
+
+            string jsonContent = JsonSerializer.Serialize(this, new JsonSerializerOptions
+            {
+                WriteIndented = true
+            });
+
+            File.WriteAllText(filePath, jsonContent);
+            Console.WriteLine($"Arquivo da partida salvo em: {filePath}.");
+        }
+
+        public static Match LoadFromFile(string filePath)
+        {
+            if (!File.Exists(filePath))
+            {
+                throw new FileNotFoundException("O arquivo especificado não existe.", filePath);
+            }
+
+            string jsonContent = File.ReadAllText(filePath);
+            return JsonSerializer.Deserialize<Match>(jsonContent) ?? throw new InvalidOperationException("Erro ao tentar desesserializar o arquivo indicado.");
         }
     }
 }

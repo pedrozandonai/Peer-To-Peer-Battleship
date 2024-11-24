@@ -9,7 +9,8 @@
 
         public void VerifySettings()
         {
-            if (GameTestMode == PeerToPeerTestMode)
+            if (GameTestMode == true &&
+                PeerToPeerTestMode == true)
                 throw new NotSupportedException("Não é possível ter o modo de teste de jogo e conexão ativos ao mesmo tempo.");
         }
     }

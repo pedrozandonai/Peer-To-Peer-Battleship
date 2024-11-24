@@ -10,6 +10,7 @@ using PeerToPeerBattleship.Infraestructure.Networking.Abstractions;
 using Serilog;
 using System.Text.Json;
 using PeerToPeerBattleship.Application.Games.Strategy.Abstractions;
+using System.Xml;
 
 namespace PeerToPeerBattleship.Application.Games
 {
@@ -52,12 +53,12 @@ namespace PeerToPeerBattleship.Application.Games
         private short SelectCreationMode()
         {
             Console.WriteLine("*-----------------------------------*");
-            Console.WriteLine("|    Como você deseja começar?      |");
+            Console.WriteLine("|      Como você deseja jogar?      |");
             Console.WriteLine("|    1 - Criar uma nova partida     |");
             Console.WriteLine("|2 - Juntar a uma partida existente |");
             Console.WriteLine("|       9 - Encerrar programa       |");
             Console.WriteLine("*-----------------------------------*");
-            var creationOption = _userInputHandler.ReadShort("Seleciona uma das opções: ");
+            var creationOption = _userInputHandler.ReadShort("Selecione uma das opções: ");
 
             switch (creationOption)
             {
@@ -82,7 +83,7 @@ namespace PeerToPeerBattleship.Application.Games
             }
 
             _logger.Information("Servidor iniciado e pronto para jogar.");
-            GameLoop(1);
+            await GameLoop(1);
         }
 
         private async Task JoinExistingGameAsync()
@@ -99,29 +100,50 @@ namespace PeerToPeerBattleship.Application.Games
             }
 
             _logger.Information("Conectado ao jogo. Pronto para jogar.");
-            GameLoop(2);
+            await GameLoop(2);
         }
 
-        private void GameLoop(short creationType)
+        private async Task GameLoop(short creationType)
         {
             if (!_applicationSettings.PeerToPeerTestMode)
             {
                 Match = Match.Create(_sock.LocalMachineIP, _sock.RemoteMachineIp, _userInputHandler);
-                Match.CreateUserBoard();
+                Match.ShipsCreationMethod();
                 Match.DisplayBoard(Match.UserBoard);
             }
 
+            // Verificar a necessidade dessa verificação e espera.
+            if (creationType == 2)
+            {
+                Console.WriteLine("Aguardando até que o oponente envie os navios.");
+                while (Match.EnemyBoard == null) if (Match.EnemyBoard != null) break;
+            }
+
+            await _sock.SendMessageAsync(await Match.SerializeShipsDto(Match.UserBoard.Ships));
+
             while (true)
             {
-                string input = Console.ReadLine()!;
                 if (!_applicationSettings.GameTestMode)
                 {
-                    _sock.SendMessageAsync(input).Wait();
-
-                    if (input.Equals("exit", StringComparison.OrdinalIgnoreCase))
+                    if (Match.IpTurn.Equals(Match.LocalMachineIp))
                     {
-                        _sock.CloseConnection();
-                        break;
+                        var attackPosition = Match.AttackEnemyShip();
+                        Match.EnemyBoard.Attack(attackPosition.X, attackPosition.Y);
+
+                        await _sock.SendMessageAsync(string.Format("{0}{1}", attackPosition.X, attackPosition.Y));
+
+                        if (Match.EnemyBoard.AllShipsSunk)
+                        {
+                            Match.IsMatchOver = true;
+
+                            Match.MatchWinnerIp = Match.LocalMachineIp;
+
+                            _sock.CloseConnection();
+
+                            Console.WriteLine("Parabéns, você é o ganhador da partida! ☺️");
+                        }
+
+                        Match.IpTurn = Match.RemoteMachineIp!;
                     }
                 }
             }
@@ -135,25 +157,37 @@ namespace PeerToPeerBattleship.Application.Games
             try
             {
                 GameStrategyContext strategyContext;
-                IGameStrategy? strategy;
+                IGameStrategy? strategy = new DataNotRecognizedStrategy(_logger);
 
-                var shipsDto = JsonSerializer.Deserialize<ShipsDto>(message);
-                if (shipsDto != null
-                    && shipsDto.Ships?.Any() == true)
+                if (message.Length == 2)
                 {
-                    strategy = new ReceiveShipsStrategy();
-                }
-                else
-                {
-                    strategy = new DataNotRecognizedStrategy();
+                    strategy = new ReceiveAttackPositionStrategy(_logger);
+
+                    strategyContext = new GameStrategyContext(strategy);
+                    Match = strategyContext.ExecuteStrategy(message, Match);
+
+                    return;
                 }
 
-                strategyContext = new GameStrategyContext(strategy);
-                strategyContext.ExecuteStrategy(message, Match);
+                try
+                {
+                    var shipsDto = JsonSerializer.Deserialize<ShipsDto>(message);
+                    if (shipsDto != null
+                        && shipsDto.Ships?.Any() == true)
+                    {
+                        strategy = new ReceiveShipsStrategy(_logger);
+                    }
+
+                    strategyContext = new GameStrategyContext(strategy);
+                    Match = strategyContext.ExecuteStrategy(message, Match);
+
+                    return;
+                }
+                catch(Exception){ }
             }
-            catch (JsonException ex)
+            catch (Exception ex)
             {
-                _logger.Error("Erro ao desserializar mensagem: {0}. Mensagem: {1}", ex.Message, message);
+                _logger.Error("Uma exceção foi lançada: {0}. Mensagem recebida pelo peer: {1}", ex.Message, message);
             }
         }
 
