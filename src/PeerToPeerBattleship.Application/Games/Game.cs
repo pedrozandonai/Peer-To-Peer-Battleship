@@ -93,11 +93,11 @@ namespace PeerToPeerBattleship.Application.Games
 
         private async Task StartNewGameAsync()
         {
-            Match.SelectedPort = _userInputHandler.ReadShort("Digite a porta para iniciar o servidor: ");
+            short port = _userInputHandler.ReadShort("Digite a porta para iniciar o servidor: ");
 
             if (!_applicationSettings.GameTestMode)
             {
-                await _sock.StartServerAsync(Match.SelectedPort);
+                await _sock.StartServerAsync(port);
 
                 _sock.MessageReceived += OnMessageReceived;
                 _sock.ConnectionClosed += OnConnectionClosed;
@@ -109,15 +109,22 @@ namespace PeerToPeerBattleship.Application.Games
 
         private async Task JoinExistingGameAsync(short creationOption)
         {
+            string remoteIp = string.Empty;
+            short port = 0;
             if (creationOption != 3)
             {
-                Match.RemoteMachineIp = _userInputHandler.ReadIpAddress("Digite o IP do servidor: ");
-                Match.SelectedPort = _userInputHandler.ReadShort("Digite a porta do servidor: ");
+                remoteIp = _userInputHandler.ReadIpAddress("Digite o IP do servidor: ");
+                port = _userInputHandler.ReadShort("Digite a porta do servidor: ");
+            }
+            else
+            {
+                remoteIp = Match.RemoteMachineIp!;
+                port = Match.SelectedPort;
             }
 
             if (!_applicationSettings.GameTestMode)
             {
-                await _sock.ConnectToServerAsync(Match.RemoteMachineIp!, Match.SelectedPort);
+                await _sock.ConnectToServerAsync(remoteIp, port);
 
                 _sock.MessageReceived += OnMessageReceived;
                 _sock.ConnectionClosed += OnConnectionClosed;
@@ -129,6 +136,8 @@ namespace PeerToPeerBattleship.Application.Games
 
         private async Task GameLoop(short creationType)
         {
+            Match.SelectedPort = _sock.SelectedPort;
+
             if (creationType != 3)
             {
                 if (!_applicationSettings.PeerToPeerTestMode)

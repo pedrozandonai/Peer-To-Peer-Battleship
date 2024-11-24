@@ -11,6 +11,7 @@ namespace PeerToPeerBattleship.Infraestructure.Networking
     {
         public string LocalMachineIP { get; set; }
         public string RemoteMachineIp { get; set; }
+        public short SelectedPort { get; set; }
         public event Action<string> MessageReceived;
         public event Action ConnectionClosed;
 
@@ -35,6 +36,8 @@ namespace PeerToPeerBattleship.Infraestructure.Networking
 
                 _client = await listener.AcceptTcpClientAsync();
                 RemoteMachineIp = ((IPEndPoint)_client.Client.RemoteEndPoint!).Address.ToString();
+                SelectedPort = port;
+
                 _logger.Information("Cliente conectado. Endereço IP: {0}", RemoteMachineIp);
 
                 _stream = _client.GetStream();
@@ -49,6 +52,7 @@ namespace PeerToPeerBattleship.Infraestructure.Networking
         public async Task ConnectToServerAsync(string serverIp, short port)
         {
             RemoteMachineIp = serverIp;
+            SelectedPort = port;
 
             _client = new TcpClient();
             await _client.ConnectAsync(serverIp, port);

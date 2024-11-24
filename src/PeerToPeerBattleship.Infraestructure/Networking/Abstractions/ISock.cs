@@ -4,6 +4,7 @@
     {
         public string LocalMachineIP { get; set; }
         public string RemoteMachineIp { get; set; }
+        public short SelectedPort { get; set; }
         event Action<string> MessageReceived;
         event Action ConnectionClosed;
 
