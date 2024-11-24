@@ -184,10 +184,10 @@ namespace PeerToPeerBattleship.Application.Games
                         }
 
                         Match.IpTurn = Match.RemoteMachineIp!;
+
+                        Match.SaveToFile();
                     }
                 }
-
-                Match.SaveToFile();
             }
         }
 
