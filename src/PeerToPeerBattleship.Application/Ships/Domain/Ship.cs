@@ -59,7 +59,7 @@ namespace PeerToPeerBattleship.Application.Ships.Domain
 
         public ShipDto CreateShipDto()
             => new(
-                Name.RemoveAccent().ToUpper(),
+                Name.RemoveAccent().ToLower(),
                 Positions.Select(position => new List<int> { position.X, position.Y }).ToList());
 
         public static List<Ship> DeserializeShips(string json)

@@ -39,6 +39,8 @@ namespace PeerToPeerBattleship.Application.Games.Strategy.Strategies
 
             gameMatch.IpTurn = gameMatch.LocalMachineIp!;
 
+            gameMatch.SaveToFile();
+
             return gameMatch;
         }
     }

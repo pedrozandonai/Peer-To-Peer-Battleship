@@ -15,6 +15,8 @@ namespace PeerToPeerBattleship.Application.Games.Strategy.Strategies
 
         public Match ExecuteGameStrategy(string message, Match gameMatch)
         {
+            gameMatch.SaveToFile();
+
             _logger.Error("Mensagem recebida pelo peer não reconhecida pelo programa. Mensagem: {0}", message);
 
             return gameMatch;

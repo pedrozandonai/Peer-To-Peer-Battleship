@@ -18,6 +18,7 @@ namespace PeerToPeerBattleship.Application.Matches
         public bool IsMatchOver { get; set; }
         public DateTime CreationDateTime { get; set; }
         public string MatchWinnerIp { get; set; }
+        public short SelectedPort { get; set; }
         private List<Ship> AvailableShips { get; set; } = [];
 
         private Match(string? localMachineIp, string? remoteMachineIp, IUserInputHandler userInputHandler, bool isMatchOver)
@@ -330,7 +331,7 @@ namespace PeerToPeerBattleship.Application.Matches
             return attackPosition;
         }
 
-        public async Task<string> SerializeShipsDto(List<Ship> ships)
+        public async Task<string> SerializeShipsDto(List<Ship> ships, CancellationToken cancellationToken)
         {
             List<ShipDto> shipsDtos = new List<ShipDto>();
             foreach (var ship in ships)
@@ -339,7 +340,7 @@ namespace PeerToPeerBattleship.Application.Matches
             }
 
             using var memoryStream = new MemoryStream();
-            await JsonSerializer.SerializeAsync(memoryStream, new ShipsDto(shipsDtos), cancellationToken: CancellationToken.None);
+            await JsonSerializer.SerializeAsync(memoryStream, new ShipsDto(shipsDtos), cancellationToken: cancellationToken);
 
             memoryStream.Seek(0, SeekOrigin.Begin);
             using var reader = new StreamReader(memoryStream);
@@ -366,6 +367,8 @@ namespace PeerToPeerBattleship.Application.Matches
                 WriteIndented = true
             });
 
+            if (File.Exists(filePath)) File.Delete(filePath);
+
             File.WriteAllText(filePath, jsonContent);
             Console.WriteLine($"Arquivo da partida salvo em: {filePath}.");
         }
@@ -379,6 +382,42 @@ namespace PeerToPeerBattleship.Application.Matches
 
             string jsonContent = File.ReadAllText(filePath);
             return JsonSerializer.Deserialize<Match>(jsonContent) ?? throw new InvalidOperationException("Erro ao tentar desesserializar o arquivo indicado.");
+        }
+
+        public static Match? FindAndLoadUnfinishedMatch(string directoryPath)
+        {
+            if (!Directory.Exists(directoryPath))
+            {
+                throw new DirectoryNotFoundException($"O diretório especificado não existe: {directoryPath}");
+            }
+
+            string[] files = Directory.GetFiles(directoryPath, "*.txt");
+
+            foreach (string file in files)
+            {
+                try
+                {
+                    string jsonContent = File.ReadAllText(file);
+                    Match? match = JsonSerializer.Deserialize<Match>(jsonContent);
+
+                    if (match != null && !match.IsMatchOver)
+                    {
+                        Console.WriteLine($"Partida não finalizada encontrada no arquivo: {file}");
+                        return match;
+                    }
+                }
+                catch (JsonException ex)
+                {
+                    Console.WriteLine($"Erro ao deserializar o arquivo {file}: {ex.Message}");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Erro inesperado ao processar o arquivo {file}: {ex.Message}");
+                }
+            }
+
+            Console.WriteLine("Nenhuma partida não finalizada foi encontrada.");
+            return null;
         }
     }
 }

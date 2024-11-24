@@ -31,11 +31,16 @@ namespace PeerToPeerBattleship.Application.Games.Strategy.Strategies
 
                 gameMatch.SaveToFile();
 
+                gameMatch.SaveToFile();
+
                 return gameMatch;
             }
             catch (Exception ex)
             {
                 _logger.LogExceptionError("Erro ao tentar desserializar o arquivo JSON.", ex);
+
+                gameMatch.SaveToFile();
+
                 return gameMatch;
             }
 
