@@ -4,13 +4,11 @@ using PeerToPeerBattleship.Application.Games.Strategy.Abstractions;
 using PeerToPeerBattleship.Application.Games.Strategy.Strategies;
 using PeerToPeerBattleship.Application.Matches;
 using PeerToPeerBattleship.Application.Ships.Domain;
-using PeerToPeerBattleship.Application.Ships.Model;
 using PeerToPeerBattleship.Core.Configurations;
 using PeerToPeerBattleship.Core.CustomLogger.Abstraction;
 using PeerToPeerBattleship.Core.Inputs.Abstractions;
 using PeerToPeerBattleship.Infraestructure.Networking.Abstractions;
 using Serilog;
-using System.Text.Json;
 
 namespace PeerToPeerBattleship.Application.Games
 {
@@ -20,6 +18,7 @@ namespace PeerToPeerBattleship.Application.Games
         private readonly IUserInputHandler _userInputHandler;
         private readonly ISock _sock;
         private readonly ApplicationSettings _applicationSettings;
+        private bool ConnectionClosed { get; set; }
 
         public Match Match { get; set; }
 
@@ -162,7 +161,7 @@ namespace PeerToPeerBattleship.Application.Games
 
             await _sock.SendMessageAsync(await Match.SerializeShipsDto(Match.UserBoard.Ships, CancellationToken.None));
 
-            while (true)
+            while (true || !ConnectionClosed)
             {
                 if (!_applicationSettings.GameTestMode)
                 {
@@ -195,8 +194,10 @@ namespace PeerToPeerBattleship.Application.Games
 
         private void OnMessageReceived(string message)
         {
-            _logger.Information("Mensagem recebida: {0}", message);
-            // TODO: Ver como isso irá funcionar, provavelmente um padrão strategy faria sentido aqui.
+            if (!_applicationSettings.IsProductionEnvironment)
+            {
+                _logger.Information("Mensagem recebida: {0}", message);
+            }
 
             try
             {
@@ -266,6 +267,7 @@ namespace PeerToPeerBattleship.Application.Games
             }
 
             _logger.Error("Não foi possível reconectar após {0} tentativas.", maxRetries);
+            ConnectionClosed = true;
         }
     }
 }

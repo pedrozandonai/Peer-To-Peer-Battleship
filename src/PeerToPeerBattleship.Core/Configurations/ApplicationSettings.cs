@@ -6,6 +6,7 @@
         public string Version { get; set; } = string.Empty;
         public bool GameTestMode { get; set; }
         public bool PeerToPeerTestMode { get; set; }
+        public bool IsProductionEnvironment { get; set; }
 
         public void VerifySettings()
         {

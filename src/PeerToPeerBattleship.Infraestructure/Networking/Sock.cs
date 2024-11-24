@@ -1,4 +1,5 @@
 ﻿using PeerToPeerBattleship.Core.CustomLogger;
+using PeerToPeerBattleship.Core.CustomLogger.Abstraction;
 using PeerToPeerBattleship.Infraestructure.Networking.Abstractions;
 using Serilog;
 using System.Net;
@@ -20,9 +21,9 @@ namespace PeerToPeerBattleship.Infraestructure.Networking
 
         private readonly ILogger _logger;
 
-        public Sock(ILogger logger)
+        public Sock(IContextualLogger<Sock> contextualLogger)
         {
-            _logger = logger;
+            _logger = contextualLogger.Logger;
             LocalMachineIP = GetLocalMachineIp();
         }
 

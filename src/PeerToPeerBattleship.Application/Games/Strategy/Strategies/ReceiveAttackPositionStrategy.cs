@@ -15,7 +15,6 @@ namespace PeerToPeerBattleship.Application.Games.Strategy.Strategies
 
         public Match ExecuteGameStrategy(string message, Match gameMatch)
         {
-
             if (string.IsNullOrWhiteSpace(message) || message.Length != 2)
             {
                 _logger.Error("A mensagem deve conter 2 dígitos indicando as posições onde o navio deve ser atacado.");
