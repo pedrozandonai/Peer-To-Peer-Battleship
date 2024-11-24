@@ -1,14 +1,17 @@
-﻿namespace PeerToPeerBattleship.Application.Ships.Model
+﻿using System.Text.Json.Serialization;
+
+namespace PeerToPeerBattleship.Application.Ships.Model
 {
     public class ShipDto
     {
         public string Tipo { get; set; }
         public List<List<int>> Posicoes { get; set; }
 
-        public ShipDto(string type, List<List<int>> positions)
+        [JsonConstructor]
+        public ShipDto(string tipo, List<List<int>> posicoes)
         {
-            Tipo = type;
-            Posicoes = positions;
+            Tipo = tipo;
+            Posicoes = posicoes;
         }
     }
 }

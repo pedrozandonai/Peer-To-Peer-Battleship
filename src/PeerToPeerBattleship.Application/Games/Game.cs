@@ -3,6 +3,7 @@ using PeerToPeerBattleship.Application.Games.Strategy;
 using PeerToPeerBattleship.Application.Games.Strategy.Abstractions;
 using PeerToPeerBattleship.Application.Games.Strategy.Strategies;
 using PeerToPeerBattleship.Application.Matches;
+using PeerToPeerBattleship.Application.Ships.Domain;
 using PeerToPeerBattleship.Application.Ships.Model;
 using PeerToPeerBattleship.Core.Configurations;
 using PeerToPeerBattleship.Core.CustomLogger.Abstraction;
@@ -213,9 +214,9 @@ namespace PeerToPeerBattleship.Application.Games
 
                 try
                 {
-                    var shipsDto = JsonSerializer.Deserialize<List<ShipDto>>(message);
-                    if (shipsDto != null
-                        && shipsDto.Any() == true)
+                    var enemyShipsDto = Ship.DeserializeShips(message);
+                    if (enemyShipsDto != null
+                        && enemyShipsDto.Any() == true)
                     {
                         strategy = new ReceiveShipsStrategy(_logger);
                     }
