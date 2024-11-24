@@ -386,12 +386,15 @@ namespace PeerToPeerBattleship.Application.Matches
 
         public static Match? FindAndLoadUnfinishedMatch(string directoryPath)
         {
-            if (!Directory.Exists(directoryPath))
+            string[] files;
+            try
             {
-                throw new DirectoryNotFoundException($"O diretório especificado não existe: {directoryPath}");
+                files = Directory.GetFiles(directoryPath, "*.txt");
             }
-
-            string[] files = Directory.GetFiles(directoryPath, "*.txt");
+            catch (Exception ex)
+            {
+                return null;
+            }
 
             foreach (string file in files)
             {

@@ -18,7 +18,6 @@
   <ItemGroup>
     <ProjectReference Include="..\PeerToPeerBattleship.Application\PeerToPeerBattleship.Application.csproj" />
     <ProjectReference Include="..\PeerToPeerBattleship.Core\PeerToPeerBattleship.Core.csproj" />
-    <ProjectReference Include="..\PeerToPeerBattleship.DesktopAppIntegration\PeerToPeerBattleship.DesktopAppIntegration.csproj" />
     <ProjectReference Include="..\PeerToPeerBattleship.Infraestructure\PeerToPeerBattleship.Infraestructure.csproj" />
   </ItemGroup>
 
