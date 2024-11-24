@@ -136,8 +136,6 @@ namespace PeerToPeerBattleship.Application.Games
 
         private async Task GameLoop(short creationType)
         {
-            Match.SelectedPort = _sock.SelectedPort;
-
             if (creationType != 3)
             {
                 if (!_applicationSettings.PeerToPeerTestMode)
@@ -147,6 +145,9 @@ namespace PeerToPeerBattleship.Application.Games
                     Match.DisplayBoard(Match.UserBoard);
                 }
             }
+
+            Match.SelectedPort = _sock.SelectedPort;
+
             if (creationType == 1)
                 Match.IpTurn = Match.LocalMachineIp!;
 
