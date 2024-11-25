@@ -139,7 +139,7 @@ namespace PeerToPeerBattleship.Application.Games
         {
             var timeout = TimeSpan.FromMinutes(2);
             using var cts = new CancellationTokenSource(timeout);
-            const int maxRetries = 5;
+            int maxRetries = _applicationSettings.Connection.MaxRetriesAmount;
 
             Match.SaveToFile();
 

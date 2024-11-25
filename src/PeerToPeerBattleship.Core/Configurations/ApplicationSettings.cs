@@ -9,6 +9,7 @@
         public bool IsProductionEnvironment { get; set; }
         public MatchExpiresIn MatchExpiresIn { get; set; } = new();
         public bool SkipApplicationLogo { get; set; }
+        public Connection Connection { get; set; } = new();
 
         public void VerifySettings()
         {
@@ -49,5 +50,10 @@
                 _ => throw new ArgumentException("Unidade de tempo inválida para expiração.")
             };
         }
+    }
+
+    public class Connection
+    {
+        public int MaxRetriesAmount { get; set; }
     }
 }
