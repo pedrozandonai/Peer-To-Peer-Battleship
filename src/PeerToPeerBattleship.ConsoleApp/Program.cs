@@ -1,11 +1,13 @@
 ﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using PeerToPeerBattleship.Application.Games.Abstractions;
+using PeerToPeerBattleship.Application.UsersSettings.Services.Abstractions;
 using PeerToPeerBattleship.ConsoleApp.DependencyInjection;
 using PeerToPeerBattleship.Core.Configurations;
 using PeerToPeerBattleship.Core.CustomLogger;
 using PeerToPeerBattleship.Core.CustomLogger.Abstraction;
 using PeerToPeerBattleship.Core.Extensions;
+using PeerToPeerBattleship.Core.Inputs.Abstractions;
 using Serilog;
 
 namespace PeerToPeerBattleship.ConsoleApp
@@ -25,8 +27,6 @@ namespace PeerToPeerBattleship.ConsoleApp
             ApplicationSettings applicationSettings = new ApplicationSettings();
             configuration.GetSection(nameof(ApplicationSettings)).Bind(applicationSettings);
 
-            if (!applicationSettings.SkipApplicationLogo) StartDisplay();
-
             //Configura os logs da aplicação
             LoggerInjection.CreateLogger();
 
@@ -34,8 +34,9 @@ namespace PeerToPeerBattleship.ConsoleApp
             ServiceProvider serviceProvider = AddDependencyInjection(applicationSettings);
 
             var logger = serviceProvider.GetService<IContextualLogger<Program>>()!.Logger;
-            logger.Information("Iniciando Aplicação...");
-            
+
+            if (!applicationSettings.SkipApplicationLogo) StartDisplay();
+
             try
             {
                 applicationSettings.VerifySettings();
@@ -55,8 +56,26 @@ namespace PeerToPeerBattleship.ConsoleApp
         {
             try
             {
-                var game = serviceProvider.GetService<IGame>();
-                await game!.Create();
+                var selectedProgramOption = DisplayProgramOptions(serviceProvider);
+
+                while(selectedProgramOption != 9)
+                {
+                    switch (selectedProgramOption)
+                    {
+                        case 1:
+                            var game = serviceProvider.GetService<IGame>();
+                            await game!.Create();
+
+                            break;
+                        case 2:
+
+                            break;
+                        case 9:
+                            return;
+                    }
+                }
+
+
             }
             catch (Exception ex)
             {
@@ -94,6 +113,42 @@ namespace PeerToPeerBattleship.ConsoleApp
 
             Thread.Sleep(5000);
             ConsoleExtension.Clear();
+        }
+
+        private static short DisplayProgramOptions(ServiceProvider serviceProvider)
+        {
+            ConsoleExtension.Clear();
+            Console.WriteLine("*-----------------------------------------------------------------------*");
+            Console.WriteLine("|                    O que você deseja fazer agora?                     |");
+            Console.WriteLine("|                              1 - Jogar                                |");
+            Console.WriteLine("|                           2 - Configurações                           |");
+            Console.WriteLine("|                              9 - Sair                                 |");
+            Console.WriteLine("*-----------------------------------------------------------------------*");
+            var userInputHandler = serviceProvider.GetService<IUserInputHandler>();
+            var selectedProgramOption = userInputHandler!.ReadShort("    Digite a opção desejada: ");
+
+            if (selectedProgramOption == 1 ||
+                selectedProgramOption == 2 ||
+                selectedProgramOption == 9)
+                return selectedProgramOption;
+
+            Console.WriteLine("Opção não reconhecida pelo programa, tente novamente.");
+            Thread.Sleep(3500);
+
+            return DisplayProgramOptions(serviceProvider);
+        }
+
+        private static void CreateDefaultUserFileSettings(ServiceProvider serviceProvider)
+        {
+            var createUserSettingsService = serviceProvider.GetService<ICreateSettingsService>();
+            var saveSettingsService = serviceProvider.GetService<ISaveSettingsService>();
+
+            if (!saveSettingsService!.VerifyIfUserAlreadyHasSettings())
+            {
+                var defaultUserSettings = createUserSettingsService!.CreateDefaultSettings();
+
+                saveSettingsService.SaveUserSettings(defaultUserSettings);
+            }
         }
     }
 }
