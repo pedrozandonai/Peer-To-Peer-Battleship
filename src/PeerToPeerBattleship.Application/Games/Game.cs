@@ -5,7 +5,9 @@ using PeerToPeerBattleship.Application.Games.Strategy.Strategies;
 using PeerToPeerBattleship.Application.Matches;
 using PeerToPeerBattleship.Application.Ships.Domain;
 using PeerToPeerBattleship.Core.Configurations;
+using PeerToPeerBattleship.Core.CustomLogger;
 using PeerToPeerBattleship.Core.CustomLogger.Abstraction;
+using PeerToPeerBattleship.Core.Extensions;
 using PeerToPeerBattleship.Core.Inputs.Abstractions;
 using PeerToPeerBattleship.Infraestructure.Networking.Abstractions;
 using Serilog;
@@ -41,11 +43,11 @@ namespace PeerToPeerBattleship.Application.Games
                     break;
 
                 case 2:
-                    await JoinExistingGameAsync(2);
+                    await JoinExistingGameAsync();
                     break;
 
                 case 3:
-                    await JoinExistingGameAsync(3);
+                    await ReconnectToGameAsync();
                     break;
 
                 case 9:
@@ -63,7 +65,7 @@ namespace PeerToPeerBattleship.Application.Games
             string documentsPath = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
             string folderPath = Path.Combine(documentsPath, "PeerToPeerBattleShip");
 
-            Match? unfinishedMatch = Match.FindAndLoadUnfinishedMatch(folderPath);
+            Match? unfinishedMatch = Match.FindAndLoadUnfinishedMatch(folderPath, _applicationSettings);
 
             Console.WriteLine("*-----------------------------------*");
             Console.WriteLine("|      Como você deseja jogar?      |");
@@ -81,10 +83,12 @@ namespace PeerToPeerBattleship.Application.Games
             {
                 case 1 or 2 or 9:
                     return creationOption;
+
                 case 3:
                     if (unfinishedMatch != null) Match = unfinishedMatch;
-
+                    
                     return creationOption;
+
                 default:
                     _logger.Error("Opção não reconhecida pelo programa, por favor, digite uma opção válida.");
                     return SelectCreationMode();
@@ -93,6 +97,8 @@ namespace PeerToPeerBattleship.Application.Games
 
         private async Task StartNewGameAsync()
         {
+            await ConsoleExtension.ClearAsync();
+
             short port = _userInputHandler.ReadShort("Digite a porta para iniciar o servidor: ");
 
             if (!_applicationSettings.GameTestMode)
@@ -107,20 +113,15 @@ namespace PeerToPeerBattleship.Application.Games
             await GameLoop(1);
         }
 
-        private async Task JoinExistingGameAsync(short creationOption)
+        private async Task JoinExistingGameAsync()
         {
+            await ConsoleExtension.ClearAsync();
+
             string remoteIp = string.Empty;
             short port = 0;
-            if (creationOption != 3)
-            {
-                remoteIp = _userInputHandler.ReadIpAddress("Digite o IP do servidor: ");
-                port = _userInputHandler.ReadShort("Digite a porta do servidor: ");
-            }
-            else
-            {
-                remoteIp = Match.RemoteMachineIp!;
-                port = Match.SelectedPort;
-            }
+
+            remoteIp = _userInputHandler.ReadIpAddress("Digite o IP do servidor: ");
+            port = _userInputHandler.ReadShort("Digite a porta do servidor: ");
 
             if (!_applicationSettings.GameTestMode)
             {
@@ -131,17 +132,130 @@ namespace PeerToPeerBattleship.Application.Games
             }
 
             _logger.Information("Conectado ao jogo. Pronto para jogar.");
-            await GameLoop(creationOption);
+            await GameLoop(2);
+        }
+
+        private async Task ReconnectToGameAsync()
+        {
+            var timeout = TimeSpan.FromMinutes(2);
+            using var cts = new CancellationTokenSource(timeout);
+            const int maxRetries = 5;
+
+            Match.SaveToFile();
+
+            //TODO: Validar se esse trecho do código funciona.
+            if (Match.Host.Equals(Match.RemoteMachineIp) && await TryReconnectToServerAsync(cts.Token, maxRetries))
+                return;
+
+            if (Match.Host.Equals(Match.LocalMachineIp) && await TryStartNewServerAsync(cts.Token, maxRetries))
+                return;
+
+            LogFinalFailure(maxRetries);
+        }
+
+        private async Task<bool> TryReconnectToServerAsync(CancellationToken token, int maxRetries)
+        {
+            int attempt = 0;
+            int delay = 1000;
+
+            while (attempt < maxRetries && !token.IsCancellationRequested)
+            {
+                attempt++;
+                _logger.Information("Tentativa {0} de reconexão ao servidor...", attempt);
+
+                try
+                {
+                    if (!_applicationSettings.GameTestMode)
+                        await ReinitializeSocketAsync(() => _sock.ConnectToServerAsync(Match.RemoteMachineIp!, Match.SelectedPort));
+
+                    await GameLoop(3);
+                    _logger.Information("Reconexão bem-sucedida na tentativa {0}.", attempt);
+                    return true;
+                }
+                catch (Exception ex)
+                {
+                    LogReconnectFailure(attempt, maxRetries, ex);
+                }
+
+                delay = await DelayWithExponentialBackoffAsync(delay, token);
+            }
+
+            return false;
+        }
+
+        private async Task<bool> TryStartNewServerAsync(CancellationToken token, int maxRetries)
+        {
+            int attempt = 0;
+            int delay = 1000;
+
+            while (attempt < maxRetries && !token.IsCancellationRequested)
+            {
+                attempt++;
+                _logger.Information("Tentativa {0} de iniciar um novo servidor...", attempt);
+
+                try
+                {
+                    if (!_applicationSettings.GameTestMode)
+                        await ReinitializeSocketAsync(() => _sock.StartServerAsync(Match.SelectedPort));
+
+                    await GameLoop(3);
+                    _logger.Information("Servidor iniciado com sucesso na tentativa {0}.", attempt);
+                    return true;
+                }
+                catch (Exception ex)
+                {
+                    LogStartServerFailure(attempt, maxRetries, ex);
+                }
+
+                delay = await DelayWithExponentialBackoffAsync(delay, token);
+            }
+
+            return false;
+        }
+
+        private async Task ReinitializeSocketAsync(Func<Task> connectOrStartAsync)
+        {
+            _sock.MessageReceived -= OnMessageReceived;
+            _sock.ConnectionClosed -= OnConnectionClosed;
+
+            await connectOrStartAsync();
+
+            _sock.MessageReceived += OnMessageReceived;
+            _sock.ConnectionClosed += OnConnectionClosed;
+        }
+
+        private async static Task<int> DelayWithExponentialBackoffAsync(int delay, CancellationToken token)
+        {
+            await Task.Delay(Math.Min(delay, 30000), token);
+            return delay * 2;
+        }
+
+        private void LogReconnectFailure(int attempt, int maxRetries, Exception ex)
+        {
+            _logger.LogExceptionError($"Falha ao tentar reconectar ao servidor {Match.RemoteMachineIp!} na porta {Match.SelectedPort}. Tentativa {attempt} de {maxRetries}.", ex);
+        }
+
+        private void LogStartServerFailure(int attempt, int maxRetries, Exception ex)
+        {
+            _logger.LogExceptionError($"Falha ao iniciar o servidor na porta {Match.SelectedPort}. Tentativa {attempt} de {maxRetries}.", ex);
+        }
+
+        private void LogFinalFailure(int maxRetries)
+        {
+            _logger.Error("Não foi possível reconectar ou iniciar um novo servidor após {0} tentativas.", maxRetries);
+            ConnectionClosed = true;
         }
 
         private async Task GameLoop(short creationType)
         {
+            await ConsoleExtension.ClearAsync();
+
             if (creationType != 3)
             {
                 if (!_applicationSettings.PeerToPeerTestMode)
                 {
-                    Match = Match.Create(_sock.LocalMachineIP, _sock.RemoteMachineIp, _userInputHandler);
-                    Match.ShipsCreationMethod();
+                    Match = Match.Create(_sock.LocalMachineIP, _sock.RemoteMachineIp, _userInputHandler, _applicationSettings);
+                    await Match.ShipsCreationMethod();
                     Match.DisplayBoard(Match.UserBoard);
                 }
             }
@@ -149,45 +263,56 @@ namespace PeerToPeerBattleship.Application.Games
             Match.SelectedPort = _sock.SelectedPort;
 
             if (creationType == 1)
+            {
                 Match.IpTurn = Match.LocalMachineIp!;
+                Match.Host = Match.LocalMachineIp!;
+            }
 
             // Verificar a necessidade dessa verificação e espera.
             if (creationType == 2)
             {
                 Match.IpTurn = Match.RemoteMachineIp!;
+                Match.Host = Match.RemoteMachineIp!;
+
                 Console.WriteLine("Aguardando até que o oponente envie os navios.");
+
                 while (Match.EnemyBoard == null) if (Match.EnemyBoard != null) break;
             }
 
             await _sock.SendMessageAsync(await Match.SerializeShipsDto(Match.UserBoard.Ships, CancellationToken.None));
 
-            while (true || !ConnectionClosed)
+            while (!ConnectionClosed)
             {
-                if (!_applicationSettings.GameTestMode)
+                if (!_applicationSettings.GameTestMode && Match.IpTurn.Equals(Match.LocalMachineIp))
                 {
-                    if (Match.IpTurn.Equals(Match.LocalMachineIp))
+                    await ConsoleExtension.ClearAsync();
+
+                    Match.DisplayBoards(Match.UserBoard, Match.EnemyBoard);
+
+                    var attackPosition = Match.AttackEnemyShip();
+
+                    await ConsoleExtension.ClearAsync();
+
+                    Console.WriteLine(Match.EnemyBoard.Attack(attackPosition.X, attackPosition.Y));
+
+                    Match.DisplayBoards(Match.UserBoard, Match.EnemyBoard);
+
+                    await _sock.SendMessageAsync(string.Format("{0}{1}", attackPosition.X, attackPosition.Y));
+
+                    if (Match.EnemyBoard.AllShipsSunk)
                     {
-                        Match.DisplayBoards(Match.UserBoard, Match.EnemyBoard);
-                        var attackPosition = Match.AttackEnemyShip();
-                        Match.EnemyBoard.Attack(attackPosition.X, attackPosition.Y);
+                        Match.IsMatchOver = true;
 
-                        await _sock.SendMessageAsync(string.Format("{0}{1}", attackPosition.X, attackPosition.Y));
+                        Match.MatchWinnerIp = Match.LocalMachineIp;
 
-                        if (Match.EnemyBoard.AllShipsSunk)
-                        {
-                            Match.IsMatchOver = true;
+                        _sock.CloseConnection();
 
-                            Match.MatchWinnerIp = Match.LocalMachineIp;
-
-                            _sock.CloseConnection();
-
-                            Console.WriteLine("Parabéns, você é o ganhador da partida! ☺️");
-                        }
-
-                        Match.IpTurn = Match.RemoteMachineIp!;
-
-                        Match.SaveToFile();
+                        Console.WriteLine("Parabéns, você é o ganhador da partida! ☺️");
                     }
+
+                    Match.IpTurn = Match.RemoteMachineIp!;
+
+                    Match.SaveToFile();
                 }
             }
         }
@@ -211,6 +336,15 @@ namespace PeerToPeerBattleship.Application.Games
                     strategyContext = new GameStrategyContext(strategy);
                     Match = strategyContext.ExecuteStrategy(message, Match);
 
+                    if (Match.UserBoard.AllShipsSunk)
+                    {
+                        Match.IsMatchOver = true;
+
+                        Match.MatchWinnerIp = Match.RemoteMachineIp!;
+
+                        Console.WriteLine("Você perdeu, infelizmente não foi dessa vez! 😞");
+                    }
+
                     return;
                 }
 
@@ -218,17 +352,20 @@ namespace PeerToPeerBattleship.Application.Games
                 {
                     var enemyShipsDto = Ship.DeserializeShips(message);
                     if (enemyShipsDto != null
-                        && enemyShipsDto.Any() == true)
+                        && enemyShipsDto.Any())
                     {
-                        strategy = new ReceiveShipsStrategy(_logger);
+                        strategy = new ReceiveShipsStrategy(_logger, _applicationSettings);
                     }
-
-                    strategyContext = new GameStrategyContext(strategy);
-                    Match = strategyContext.ExecuteStrategy(message, Match);
-
-                    return;
                 }
-                catch(Exception){ }
+                catch(Exception)
+                {
+                    //Não precisa tratar a exceção por que se o código não entrou até aqui é por que ele não é do strategy
+                }
+
+                strategyContext = new GameStrategyContext(strategy);
+                Match = strategyContext.ExecuteStrategy(message, Match);
+
+                return;
             }
             catch (Exception ex)
             {
@@ -238,36 +375,7 @@ namespace PeerToPeerBattleship.Application.Games
 
         private async void OnConnectionClosed()
         {
-            const int maxRetries = 3;
-            int attempt = 0;
-
-            Match.SaveToFile();
-
-            _logger.Warning("Conexão encerrada. Tentando reconectar...");
-
-            while (attempt < maxRetries)
-            {
-                attempt++;
-                try
-                {
-                    _logger.Information("Tentativa {0} de reconexão...", attempt);
-
-                    // Tenta reconectar ao servidor
-                    await _sock.ConnectToServerAsync(Match.RemoteMachineIp!, Match.SelectedPort);
-
-                    _logger.Information("Reconexão bem-sucedida.");
-                    return;
-                }
-                catch (Exception ex)
-                {
-                    _logger.Warning("Tentativa de reconexão {0} falhou: {1}", attempt, ex.Message);
-                }
-
-                await Task.Delay(3000); // Aguarda 3 segundos antes de tentar novamente
-            }
-
-            _logger.Error("Não foi possível reconectar após {0} tentativas.", maxRetries);
-            ConnectionClosed = true;
+            await ReconnectToGameAsync();
         }
     }
 }

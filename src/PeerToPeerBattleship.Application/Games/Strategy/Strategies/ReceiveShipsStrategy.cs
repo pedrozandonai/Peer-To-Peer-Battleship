@@ -1,6 +1,7 @@
 ﻿using PeerToPeerBattleship.Application.Games.Strategy.Abstractions;
 using PeerToPeerBattleship.Application.Matches;
 using PeerToPeerBattleship.Application.Ships.Domain;
+using PeerToPeerBattleship.Core.Configurations;
 using PeerToPeerBattleship.Core.CustomLogger;
 using Serilog;
 
@@ -9,10 +10,12 @@ namespace PeerToPeerBattleship.Application.Games.Strategy.Strategies
     public class ReceiveShipsStrategy : IGameStrategy
     {
         private readonly ILogger _logger;
+        private readonly ApplicationSettings _applicationSettings;
 
-        public ReceiveShipsStrategy(ILogger logger)
+        public ReceiveShipsStrategy(ILogger logger, ApplicationSettings applicationSettings)
         {
             _logger=logger;
+            _applicationSettings=applicationSettings;
         }
 
         public Match ExecuteGameStrategy(string message, Match gameMatch)
@@ -27,7 +30,10 @@ namespace PeerToPeerBattleship.Application.Games.Strategy.Strategies
                     gameMatch.EnemyBoard.PlaceShip(ship, ship.Positions);
                 }
 
-                Console.WriteLine("Navios do inimigo posicionados com sucesso.");
+                if (!_applicationSettings.IsProductionEnvironment)
+                {
+                    Console.WriteLine("Navios do inimigo posicionados com sucesso.");
+                }
 
                 gameMatch.SaveToFile();
 
@@ -41,7 +47,6 @@ namespace PeerToPeerBattleship.Application.Games.Strategy.Strategies
 
                 return gameMatch;
             }
-
         }
     }
 }

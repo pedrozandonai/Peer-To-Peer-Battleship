@@ -1,8 +1,11 @@
 ﻿using PeerToPeerBattleship.Application.Boards.Domain;
 using PeerToPeerBattleship.Application.Ships.Domain;
 using PeerToPeerBattleship.Application.Ships.Model;
+using PeerToPeerBattleship.Core.Configurations;
+using PeerToPeerBattleship.Core.Extensions;
 using PeerToPeerBattleship.Core.Inputs.Abstractions;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace PeerToPeerBattleship.Application.Matches
 {
@@ -14,34 +17,54 @@ namespace PeerToPeerBattleship.Application.Matches
         public string? RemoteMachineIp { get; set; }
         public Board UserBoard { get; set; } = new();
         public Board EnemyBoard { get; set; } = new();
+        [JsonIgnore]
         public IUserInputHandler? UserInputHandler { get; set; }
         public bool IsMatchOver { get; set; }
         public DateTime CreationDateTime { get; set; }
         public string MatchWinnerIp { get; set; }
         public short SelectedPort { get; set; }
-        private List<Ship> AvailableShips { get; set; } = [];
+        private List<Ship> AvailableShips { get; set; } =
+        [
+            new("Porta-aviões", 5),
+            new("Encouraçado", 4),
+            new("Cruzador", 3),
+            new("Cruzador", 3),
+            new("Destróier", 2),
+            new("Destróier", 2)
+        ];
+        public ApplicationSettings ApplicationSettings { get; set; }
+        public string Host { get; set; }
 
-        private Match(string? localMachineIp, string? remoteMachineIp, IUserInputHandler userInputHandler, bool isMatchOver)
+        [JsonConstructor]
+        public Match(Guid id, string ipTurn, string? localMachineIp, string? remoteMachineIp, Board userBoard, Board enemyBoard, IUserInputHandler? userInputHandler, bool isMatchOver, DateTime creationDateTime, string matchWinnerIp, short selectedPort, string host)
+        {
+            Id = id;
+            IpTurn = ipTurn;
+            LocalMachineIp = localMachineIp;
+            RemoteMachineIp = remoteMachineIp;
+            UserBoard = userBoard;
+            EnemyBoard = enemyBoard;
+            UserInputHandler = userInputHandler;
+            IsMatchOver = isMatchOver;
+            CreationDateTime = creationDateTime;
+            MatchWinnerIp = matchWinnerIp;
+            SelectedPort = selectedPort;
+            Host = host;
+        }
+
+        private Match(string? localMachineIp, string? remoteMachineIp, IUserInputHandler userInputHandler, bool isMatchOver, ApplicationSettings applicationSettings)
         {
             Id = Guid.CreateVersion7();
             LocalMachineIp = localMachineIp;
             RemoteMachineIp = remoteMachineIp;
-            AvailableShips =
-            [
-                new("Porta-aviões", 5),
-                new("Encouraçado", 4),
-                new("Cruzador", 3),
-                new("Cruzador", 3),
-                new("Destróier", 2),
-                new("Destróier", 2)
-            ];
             UserInputHandler = userInputHandler;
             IsMatchOver = isMatchOver;
             CreationDateTime = DateTime.Now;
+            ApplicationSettings = applicationSettings;
         }
 
-        public static Match Create(string localMachineIp, string remoteMachineIp, IUserInputHandler userInputHandler)
-            => new(localMachineIp, remoteMachineIp, userInputHandler, false);
+        public static Match Create(string localMachineIp, string remoteMachineIp, IUserInputHandler userInputHandler, ApplicationSettings applicationSettings)
+            => new(localMachineIp, remoteMachineIp, userInputHandler, false, applicationSettings);
 
         public Board GenerateRandomPositions()
         {
@@ -186,7 +209,7 @@ namespace PeerToPeerBattleship.Application.Matches
             Console.WriteLine();
         }
 
-        public Board ShipsCreationMethod()
+        public async Task<Board> ShipsCreationMethod()
         {
             string header = "*------------------------------------------------------------------*";
 
@@ -197,22 +220,23 @@ namespace PeerToPeerBattleship.Application.Matches
             Console.WriteLine(header);
             var creationMethod = UserInputHandler!.ReadShort("Digite a sua opção: ");
 
+            await ConsoleExtension.ClearAsync();
 
-            switch(creationMethod)
+            switch (creationMethod)
             {
                 case 1:
                     return GenerateRandomPositions();
 
                 case 2:
-                    return CreateUserBoard();
+                    return await CreateUserBoard();
 
                 default:
                     Console.WriteLine("Opção não reconhecida pelo programa...");
-                    return ShipsCreationMethod();
+                    return await ShipsCreationMethod();
             }
         }
 
-        public Board CreateUserBoard()
+        public async Task<Board> CreateUserBoard()
         {
             UserBoard = new Board();
 
@@ -258,8 +282,8 @@ namespace PeerToPeerBattleship.Application.Matches
 
                 while (true)
                 {
-                    shipSelectedPosition = PositionSelectedShip();
-                    axisPosition = PositionAxisSelectedShip();
+                    shipSelectedPosition = await PositionSelectedShip();
+                    axisPosition = await PositionAxisSelectedShip();
                     shipFinalPositions = GeneratePositions(shipSelectedPosition, axisPosition, indexedShips[selectedShip].Size);
 
                     if (ShipPositionIsValid(shipFinalPositions, axisPosition, indexedShips[selectedShip].Size)) break;
@@ -278,8 +302,10 @@ namespace PeerToPeerBattleship.Application.Matches
             return UserBoard;
         }
 
-        public short PositionAxisSelectedShip()
+        public async Task<short> PositionAxisSelectedShip()
         {
+            await ConsoleExtension.ClearAsync();
+
             Console.WriteLine("*------------------------------------------------------------------*");
             Console.WriteLine("|      Deseja posicionar o navio na vertical ou na horizontal?     |");
             Console.WriteLine("|                      1 - Vertical                                |");
@@ -291,14 +317,16 @@ namespace PeerToPeerBattleship.Application.Matches
                 selectedAxis != 2)
             {
                 Console.WriteLine("Orientação inválida, por favor, selecione uma das opções ou aperte 9 para sair do menu.");
-                return PositionAxisSelectedShip();
+                return await PositionAxisSelectedShip();
             }
 
             return selectedAxis;
         }
 
-        public (int X, int Y) PositionSelectedShip()
+        public async Task<(int X, int Y)> PositionSelectedShip()
         {
+            await ConsoleExtension.ClearAsync();
+
             Console.WriteLine("*------------------------------------------------------------------*");
             Console.WriteLine("|   Escreva a primeira coordenada de onde deseja inserir o navio   |");
             Console.WriteLine("|                                                                  |");
@@ -307,7 +335,7 @@ namespace PeerToPeerBattleship.Application.Matches
             Console.WriteLine("*------------------------------------------------------------------*");
 
             var startPosition = UserInputHandler!.ReadPositions("    Digite a coordenada inicial do seu navio (formato X,Y): ");
-            
+
             return startPosition;
         }
 
@@ -395,7 +423,7 @@ namespace PeerToPeerBattleship.Application.Matches
             return attackPosition;
         }
 
-        public async Task<string> SerializeShipsDto(List<Ship> ships, CancellationToken cancellationToken)
+        public static async Task<string> SerializeShipsDto(List<Ship> ships, CancellationToken cancellationToken)
         {
             // Converte a lista de objetos Ship para ShipDto
             List<ShipDto> shipsDtos = ships.Select(ship => ship.CreateShipDto()).ToList();
@@ -406,7 +434,7 @@ namespace PeerToPeerBattleship.Application.Matches
 
             memoryStream.Seek(0, SeekOrigin.Begin);
             using var reader = new StreamReader(memoryStream);
-            return await reader.ReadToEndAsync();
+            return await reader.ReadToEndAsync(cancellationToken);
         }
 
         public void SaveToFile()
@@ -445,7 +473,7 @@ namespace PeerToPeerBattleship.Application.Matches
             return JsonSerializer.Deserialize<Match>(jsonContent) ?? throw new InvalidOperationException("Erro ao tentar desesserializar o arquivo indicado.");
         }
 
-        public static Match? FindAndLoadUnfinishedMatch(string directoryPath)
+        public static Match? FindAndLoadUnfinishedMatch(string directoryPath, ApplicationSettings applicationSettings)
         {
             string[] files;
             try
@@ -466,6 +494,13 @@ namespace PeerToPeerBattleship.Application.Matches
 
                     if (match != null && !match.IsMatchOver)
                     {
+                        if (match.IsMatchExpired(match.CreationDateTime, applicationSettings))
+                        {
+                            Console.WriteLine(string.Format("Removendo partidas com base no arquivo de configuração a cada {0} {1}", applicationSettings.MatchExpiresIn.Value, applicationSettings.MatchExpiresIn.Time));
+                            File.Delete(file);
+                            continue;
+                        }
+
                         Console.WriteLine($"Partida não finalizada encontrada no arquivo: {file}");
                         return match;
                     }
@@ -482,6 +517,18 @@ namespace PeerToPeerBattleship.Application.Matches
 
             Console.WriteLine("Nenhuma partida não finalizada foi encontrada.");
             return null;
+        }
+
+        private bool IsMatchExpired(DateTime creationDateTime, ApplicationSettings applicationSettings)
+        {
+            // Obtém a duração configurada para expiração
+            var expirationDuration = applicationSettings.MatchExpiresIn.GetMatchExpirationDuration();
+
+            // Calcula o horário de expiração com base no tempo de criação
+            var expirationDateTime = creationDateTime.Add(expirationDuration);
+
+            // Compara com a data e hora atuais
+            return DateTime.Now > expirationDateTime;
         }
     }
 }

@@ -27,15 +27,6 @@ namespace PeerToPeerBattleship.Application.Games.Strategy.Strategies
 
             Console.WriteLine(gameMatch.UserBoard.Attack(x, y));
 
-            if (gameMatch.UserBoard.AllShipsSunk)
-            {
-                gameMatch.IsMatchOver = true;
-
-                gameMatch.MatchWinnerIp = gameMatch.RemoteMachineIp!;
-
-                Console.WriteLine("Você perdeu, infelizmente não foi dessa vez! 😞");
-            }
-
             gameMatch.IpTurn = gameMatch.LocalMachineIp!;
 
             gameMatch.SaveToFile();
