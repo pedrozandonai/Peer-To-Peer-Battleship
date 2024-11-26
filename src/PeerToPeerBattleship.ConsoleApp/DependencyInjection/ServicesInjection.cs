@@ -12,14 +12,11 @@ namespace PeerToPeerBattleship.ConsoleApp.DependencyInjection
 {
     public static class ServicesInjection
     {
-        public static ServiceCollection AddServices(this ServiceCollection services)
+        public static IServiceCollection AddServices(this IServiceCollection services)
         {
             services.AddSingleton<ISock, Sock>();
             services.AddSingleton<IUserInputHandler, UserInputHandler>();
             services.AddSingleton<IGame, Game>();
-            services.AddSingleton<ICreateSettingsService, CreateSettingsService>();
-            services.AddSingleton<IModifySettingsService, ModifySettingsService>();
-            services.AddSingleton<ISaveSettingsService, SaveSettingsService>();
 
             return services;
         }

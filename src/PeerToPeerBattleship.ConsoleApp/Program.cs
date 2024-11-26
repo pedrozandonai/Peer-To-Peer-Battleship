@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using PeerToPeerBattleship.Application.Games.Abstractions;
+using PeerToPeerBattleship.Application.UsersSettings.Domain;
 using PeerToPeerBattleship.Application.UsersSettings.Services.Abstractions;
 using PeerToPeerBattleship.ConsoleApp.DependencyInjection;
 using PeerToPeerBattleship.Core.Configurations;
@@ -31,11 +32,16 @@ namespace PeerToPeerBattleship.ConsoleApp
             LoggerInjection.CreateLogger();
 
             //Adiciona injeção de dependências
-            ServiceProvider serviceProvider = AddDependencyInjection(applicationSettings);
+            ServiceCollection services = AddDependencyInjection(applicationSettings);
+            ServiceProvider serviceProvider = services.BuildServiceProvider();
+            services = ValidateUserSettings(serviceProvider, services);
+            serviceProvider = services.BuildServiceProvider();
 
-            var logger = serviceProvider.GetService<IContextualLogger<Program>>()!.Logger;
+            var logger = serviceProvider.GetRequiredService<IContextualLogger<Program>>().Logger;
 
-            if (!applicationSettings.SkipApplicationLogo) StartDisplay();
+            var userSettings = serviceProvider.GetRequiredService<UserSettings>();
+
+            if (!userSettings.ShowApplicationInitialDisplay) StartDisplay();
 
             try
             {
@@ -63,16 +69,19 @@ namespace PeerToPeerBattleship.ConsoleApp
                     switch (selectedProgramOption)
                     {
                         case 1:
-                            var game = serviceProvider.GetService<IGame>();
-                            await game!.Create();
+                            var game = serviceProvider.GetRequiredService<IGame>();
+                            await game.Create();
 
                             break;
                         case 2:
-
+                            var modifySettingsService = serviceProvider.GetRequiredService<IModifySettingsService>();
+                            modifySettingsService.ModifyUserSettings();
                             break;
                         case 9:
                             return;
                     }
+
+                    selectedProgramOption = DisplayProgramOptions(serviceProvider);
                 }
 
 
@@ -83,14 +92,15 @@ namespace PeerToPeerBattleship.ConsoleApp
             }
         }
 
-        private static ServiceProvider AddDependencyInjection(ApplicationSettings applicationSettings)
+        private static ServiceCollection AddDependencyInjection(ApplicationSettings applicationSettings)
         {
             var services = new ServiceCollection();
             services.AddSingleton(applicationSettings);
             services.AddLogger();
             services.AddServices();
+            services.AddUserSettings();
 
-            return services.BuildServiceProvider();
+            return services;
         }
 
         private static void StartDisplay()
@@ -124,8 +134,8 @@ namespace PeerToPeerBattleship.ConsoleApp
             Console.WriteLine("|                           2 - Configurações                           |");
             Console.WriteLine("|                              9 - Sair                                 |");
             Console.WriteLine("*-----------------------------------------------------------------------*");
-            var userInputHandler = serviceProvider.GetService<IUserInputHandler>();
-            var selectedProgramOption = userInputHandler!.ReadShort("    Digite a opção desejada: ");
+            var userInputHandler = serviceProvider.GetRequiredService<IUserInputHandler>();
+            var selectedProgramOption = userInputHandler.ReadShort("    Digite a opção desejada: ");
 
             if (selectedProgramOption == 1 ||
                 selectedProgramOption == 2 ||
@@ -138,17 +148,15 @@ namespace PeerToPeerBattleship.ConsoleApp
             return DisplayProgramOptions(serviceProvider);
         }
 
-        private static void CreateDefaultUserFileSettings(ServiceProvider serviceProvider)
+        private static ServiceCollection ValidateUserSettings(ServiceProvider serviceProvider, ServiceCollection services)
         {
-            var createUserSettingsService = serviceProvider.GetService<ICreateSettingsService>();
-            var saveSettingsService = serviceProvider.GetService<ISaveSettingsService>();
+            ConsoleExtension.Clear();
 
-            if (!saveSettingsService!.VerifyIfUserAlreadyHasSettings())
-            {
-                var defaultUserSettings = createUserSettingsService!.CreateDefaultSettings();
+            var userSettingsService = serviceProvider.GetRequiredService<IUserSettingsService>();
 
-                saveSettingsService.SaveUserSettings(defaultUserSettings);
-            }
+            services.AddSingleton(userSettingsService.GetOrCreateUserSettings());
+
+            return services;
         }
     }
 }
