@@ -175,8 +175,9 @@ namespace PeerToPeerBattleship.Application.Games
                     if (!_applicationSettings.GameTestMode)
                         await ReinitializeSocketAsync(() => _sock.ConnectToServerAsync(Match.RemoteMachineIp!, Match.SelectedPort));
 
-                    await GameLoop(3);
                     _logger.Information("Reconexão bem-sucedida na tentativa {0}.", attempt);
+
+                    await GameLoop(3);
                     return true;
                 }
                 catch (Exception ex)
@@ -205,8 +206,9 @@ namespace PeerToPeerBattleship.Application.Games
                     if (!_applicationSettings.GameTestMode)
                         await ReinitializeSocketAsync(() => _sock.StartServerAsync(Match.SelectedPort));
 
-                    await GameLoop(3);
                     _logger.Information("Servidor iniciado com sucesso na tentativa {0}.", attempt);
+
+                    await GameLoop(3);
                     return true;
                 }
                 catch (Exception ex)
@@ -239,12 +241,12 @@ namespace PeerToPeerBattleship.Application.Games
 
         private void LogReconnectFailure(int attempt, int maxRetries, Exception ex)
         {
-            _logger.LogExceptionError($"Falha ao tentar reconectar ao servidor {Match.RemoteMachineIp!} na porta {Match.SelectedPort}. Tentativa {attempt} de {maxRetries}.", ex);
+            _logger.LogMinorExceptionError($"Falha ao tentar reconectar ao servidor {Match.RemoteMachineIp!} na porta {Match.SelectedPort}. Tentativa {attempt} de {maxRetries}.", ex);
         }
 
         private void LogStartServerFailure(int attempt, int maxRetries, Exception ex)
         {
-            _logger.LogExceptionError($"Falha ao iniciar o servidor na porta {Match.SelectedPort}. Tentativa {attempt} de {maxRetries}.", ex);
+            _logger.LogMinorExceptionError($"Falha ao iniciar o servidor na porta {Match.SelectedPort}. Tentativa {attempt} de {maxRetries}.", ex);
         }
 
         private void LogFinalFailure(int maxRetries)
