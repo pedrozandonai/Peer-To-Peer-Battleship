@@ -12,5 +12,12 @@ namespace PeerToPeerBattleship.Core.CustomLogger
                 ex.StackTrace,
                 ex.InnerException?.Message ?? "Nenhuma");
         }
+
+        public static void LogMinorExceptionError(this ILogger logger, string message, Exception ex)
+        {
+            logger.Error("{Message}\nExceção: {ExceptionMessage}",
+                message,
+                ex.Message);
+        }
     }
 }

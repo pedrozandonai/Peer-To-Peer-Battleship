@@ -49,7 +49,7 @@ namespace PeerToPeerBattleship.Application.UsersSettings.Domain
 
         public TimeSpan GetMatchExpirationDuration()
         {
-            return Time.ToLower() switch
+            return Time switch
             {
                 "SEGUNDOS" => TimeSpan.FromSeconds(Value),
                 "MINUTOS" => TimeSpan.FromMinutes(Value),

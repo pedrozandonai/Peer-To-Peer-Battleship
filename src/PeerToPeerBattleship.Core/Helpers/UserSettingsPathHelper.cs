@@ -3,7 +3,7 @@
     public static class UserSettingsPathHelper
     {
         private const string SettingsFolder = "PeerToPeerBattleShip/settings";
-        private const string SettingsFileName = "UserSettings";
+        private const string SettingsFileName = "UserSettings.txt";
 
         public static string GetFolderPath()
         {
