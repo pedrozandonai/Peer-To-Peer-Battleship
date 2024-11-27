@@ -455,11 +455,11 @@ namespace PeerToPeerBattleship.Application.Matches
             }
 
             string documentsPath = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
-            string folderPath = Path.Combine(documentsPath, "PeerToPeerBattleShip");
+            string folderPath = Path.Combine(documentsPath, Path.Combine("PeerToPeerBattleShip", "matches"));
 
             Directory.CreateDirectory(folderPath);
 
-            string fileName = $"{CreationDateTime:yyyy-MM-dd_HH-mm-ss}_{RemoteMachineIp}.txt";
+            string fileName = $"{Id}.txt";
             string filePath = Path.Combine(folderPath, fileName);
 
             string jsonContent = JsonSerializer.Serialize(this, new JsonSerializerOptions
@@ -488,7 +488,7 @@ namespace PeerToPeerBattleship.Application.Matches
             string[] files;
             try
             {
-                files = Directory.GetFiles(directoryPath, "*.txt");
+                files = Directory.GetFiles(Path.Combine(directoryPath, "matches"), "*.txt");
             }
             catch (Exception ex)
             {

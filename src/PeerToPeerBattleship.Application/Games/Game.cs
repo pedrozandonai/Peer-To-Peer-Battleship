@@ -265,9 +265,10 @@ namespace PeerToPeerBattleship.Application.Games
                 {
                     Match = Match.Create(_sock.LocalMachineIP, _sock.RemoteMachineIp, _userInputHandler, _userSettings);
                     await Match.ShipsCreationMethod();
-                    Match.DisplayBoard(Match.UserBoard);
                 }
             }
+
+            Match.DisplayBoard(Match.UserBoard);
 
             Match.SelectedPort = _sock.SelectedPort;
 
@@ -359,7 +360,7 @@ namespace PeerToPeerBattleship.Application.Games
 
                 try
                 {
-                    var enemyShipsDto = Ship.DeserializeShips(message);
+                    var enemyShipsDto = Ship.DeserializeShipsDto(message);
                     if (enemyShipsDto != null
                         && enemyShipsDto.Any())
                     {

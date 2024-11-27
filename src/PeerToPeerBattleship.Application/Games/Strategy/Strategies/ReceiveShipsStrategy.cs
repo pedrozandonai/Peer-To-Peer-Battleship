@@ -22,7 +22,7 @@ namespace PeerToPeerBattleship.Application.Games.Strategy.Strategies
         {
             try
             {
-                var enemyShipsDto = Ship.DeserializeShips(message);
+                var enemyShipsDto = Ship.DeserializeShipsDto(message);
                 gameMatch.EnemyBoard = new Boards.Domain.Board();
 
                 foreach(var ship in enemyShipsDto)
