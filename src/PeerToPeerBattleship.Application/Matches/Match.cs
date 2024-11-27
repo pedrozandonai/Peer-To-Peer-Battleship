@@ -2,7 +2,6 @@
 using PeerToPeerBattleship.Application.Ships.Domain;
 using PeerToPeerBattleship.Application.Ships.Model;
 using PeerToPeerBattleship.Application.UsersSettings.Domain;
-using PeerToPeerBattleship.Core.Configurations;
 using PeerToPeerBattleship.Core.Extensions;
 using PeerToPeerBattleship.Core.Inputs.Abstractions;
 using System.Text.Json;
@@ -423,6 +422,14 @@ namespace PeerToPeerBattleship.Application.Matches
             Console.WriteLine("*------------------------------------------------------------------*");
             var attackPosition = UserInputHandler!.ReadPositions("    Digite a coordenada (formato X,Y): ");
 
+            if(UserAlreadyAtackedThisPosition(attackPosition))
+            {
+                ConsoleExtension.Clear();
+                Console.WriteLine("Você já atacou essa posição, digite outra posição.");
+                Match.DisplayBoards(UserBoard, EnemyBoard);
+                return AttackEnemyShip();
+            }
+
             return attackPosition;
         }
 
@@ -524,14 +531,14 @@ namespace PeerToPeerBattleship.Application.Matches
 
         private bool IsMatchExpired(DateTime creationDateTime, UserSettings userSettings)
         {
-            // Obtém a duração configurada para expiração
             var expirationDuration = userSettings.MatchExpiresIn.GetMatchExpirationDuration();
 
-            // Calcula o horário de expiração com base no tempo de criação
             var expirationDateTime = creationDateTime.Add(expirationDuration);
 
-            // Compara com a data e hora atuais
             return DateTime.Now > expirationDateTime;
         }
+
+        public bool UserAlreadyAtackedThisPosition((int X, int Y) atackedPosition)
+            => EnemyBoard.ShotsFired.Contains(atackedPosition);
     }
 }

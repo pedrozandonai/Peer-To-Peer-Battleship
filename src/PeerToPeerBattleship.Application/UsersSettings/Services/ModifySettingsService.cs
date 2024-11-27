@@ -136,8 +136,8 @@ namespace PeerToPeerBattleship.Application.UsersSettings.Services
             Console.WriteLine("|              CONFIGURAÇÕES DO DISPLAY INICIAL DO PROGRAMA             |");
             Console.WriteLine("*-----------------------------------------------------------------------*");
             Console.WriteLine("|             Selecione a configuração que deseja alterar               |");
-            Console.WriteLine("|                             1 - Exibir                                |");
-            Console.WriteLine("|                           2 - Não Exibir                              |");
+            Console.WriteLine("|                          1 - Exibir (false)                           |");
+            Console.WriteLine("|                        2 - Não Exibir (true)                          |");
             Console.WriteLine("|                              9 - Sair                                 |");
             Console.WriteLine("*-----------------------------------------------------------------------*");
             Console.WriteLine(string.Format("VALOR ATUAL: {0}", UsersSettings.ShowApplicationInitialDisplay));

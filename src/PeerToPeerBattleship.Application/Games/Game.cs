@@ -298,15 +298,15 @@ namespace PeerToPeerBattleship.Application.Games
 
                     Match.DisplayBoards(Match.UserBoard, Match.EnemyBoard);
 
-                    var attackPosition = Match.AttackEnemyShip();
+                    var attackedPosition = Match.AttackEnemyShip();
 
                     await ConsoleExtension.ClearAsync();
 
-                    Console.WriteLine(Match.EnemyBoard.Attack(attackPosition.X, attackPosition.Y));
+                    Console.WriteLine(Match.EnemyBoard.Attack(attackedPosition.X, attackedPosition.Y));
 
                     Match.DisplayBoards(Match.UserBoard, Match.EnemyBoard);
 
-                    await _sock.SendMessageAsync(string.Format("{0}{1}", attackPosition.X, attackPosition.Y));
+                    await _sock.SendMessageAsync(string.Format("{0}{1}", attackedPosition.X, attackedPosition.Y));
 
                     if (Match.EnemyBoard.AllShipsSunk)
                     {
