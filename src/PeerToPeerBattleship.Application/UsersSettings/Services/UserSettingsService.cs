@@ -55,11 +55,7 @@ namespace PeerToPeerBattleship.Application.UsersSettings.Services
         {
             _logger.Information("Criando novo arquivo de configuração.");
 
-            UserSettings userSettings =
-                new(
-                    false,
-                    new MatchExpiresIn(15, "MINUTOS"),
-                    new Connection(10));
+            UserSettings userSettings = new();
 
             _logger.Information("Arquivo de configuração padrão criado com sucesso.");
 

@@ -50,15 +50,18 @@ namespace PeerToPeerBattleship.Application.UsersSettings.Services
                 selectedSettingsOption = DisplaySettingsOptions();
             }
 
-            var changeSettingsOption = DisplayChangedSettings();
-            if (changeSettingsOption == 1)
+            if (!UsersSettings.Equals(_oldUserSettings))
             {
-                _userSettingsService.SaveUserSettings(UsersSettings);
-            }
-            else
-            {
-                _logger.Information("Desfazendo as alterações...");
-                UsersSettings = _oldUserSettings;
+                var changeSettingsOption = DisplayChangedSettings();
+                if (changeSettingsOption == 1)
+                {
+                    _userSettingsService.SaveUserSettings(UsersSettings);
+                }
+                else
+                {
+                    _logger.Information("Desfazendo as alterações...");
+                    UsersSettings = _oldUserSettings;
+                }
             }
         }
 
@@ -136,8 +139,8 @@ namespace PeerToPeerBattleship.Application.UsersSettings.Services
             Console.WriteLine("|              CONFIGURAÇÕES DO DISPLAY INICIAL DO PROGRAMA             |");
             Console.WriteLine("*-----------------------------------------------------------------------*");
             Console.WriteLine("|             Selecione a configuração que deseja alterar               |");
-            Console.WriteLine("|                             1 - Exibir                                |");
-            Console.WriteLine("|                           2 - Não Exibir                              |");
+            Console.WriteLine("|                          1 - Exibir (false)                           |");
+            Console.WriteLine("|                        2 - Não Exibir (true)                          |");
             Console.WriteLine("|                              9 - Sair                                 |");
             Console.WriteLine("*-----------------------------------------------------------------------*");
             Console.WriteLine(string.Format("VALOR ATUAL: {0}", UsersSettings.ShowApplicationInitialDisplay));
@@ -326,7 +329,17 @@ namespace PeerToPeerBattleship.Application.UsersSettings.Services
                         var maxRetriesAmount = DisplayConnectionMaxRetriesAmountSettings();
                         if (maxRetriesAmount == -1)
                             break;
+
                         UsersSettings.Connection.MaxRetriesAmount = maxRetriesAmount;
+
+                        break;
+
+                    case 2: //Exibe a configuração da porta padrão utilizada nas conexões.
+                        var defaultPort = DisplayConnectionPortSettings();
+                        if (defaultPort == -1)
+                            break;
+
+                        UsersSettings.Connection.Port = defaultPort;
 
                         break;
                     case 9: //Sair
@@ -344,11 +357,13 @@ namespace PeerToPeerBattleship.Application.UsersSettings.Services
             Console.WriteLine("|                 CONFIGURAÇÕES DA CONEXÃO PEER-TO-PEER                 |");
             Console.WriteLine("*-----------------------------------------------------------------------*");
             Console.WriteLine("|              1 - Tentativas de reconexão em caso de falha             |");
+            Console.WriteLine("|                 2 - Definir porta padrão para conexões                |");
             Console.WriteLine("|                                9 - Sair                               |");
             Console.WriteLine("*-----------------------------------------------------------------------*");
             var connectionSettingsOption = _userInputHandler.ReadShort("  Escolha uma opção: ");
 
             if (connectionSettingsOption == 1 ||
+                connectionSettingsOption == 2 ||
                 connectionSettingsOption == 9)
                 return connectionSettingsOption;
 
@@ -369,6 +384,28 @@ namespace PeerToPeerBattleship.Application.UsersSettings.Services
             Console.WriteLine("*-----------------------------------------------------------------------*");
             Console.WriteLine(string.Format("VALOR ATUAL: {0}", UsersSettings.Connection.MaxRetriesAmount));
             var maxRetriesAmountConfig = _userInputHandler.ReadInt("  Digite o valor desejado: ");
+
+            if (maxRetriesAmountConfig >= 0 ||
+                maxRetriesAmountConfig == -1)
+                return maxRetriesAmountConfig;
+
+            Console.WriteLine("Opção não reconhecida pelo programa, por favor, tente novamente.");
+            Thread.Sleep(3500);
+
+            return DisplayConnectionSettings();
+        }
+
+        private short DisplayConnectionPortSettings()
+        {
+            ConsoleExtension.Clear();
+            Console.WriteLine("*-----------------------------------------------------------------------*");
+            Console.WriteLine("|               CONFIGURAÇÃO DA PORTA PADRÃO DAS CONEXÕES               |");
+            Console.WriteLine("*-----------------------------------------------------------------------*");
+            Console.WriteLine("|                  INSIRA UM VALOR MAIOR OU IGUAL A 0                   |");
+            Console.WriteLine("|                        OU DIGITE -1 PARA SAIR                         |");
+            Console.WriteLine("*-----------------------------------------------------------------------*");
+            Console.WriteLine(string.Format("VALOR ATUAL: {0}", UsersSettings.Connection.Port));
+            var maxRetriesAmountConfig = _userInputHandler.ReadShort("  Digite o valor desejado: ");
 
             if (maxRetriesAmountConfig >= 0 ||
                 maxRetriesAmountConfig == -1)

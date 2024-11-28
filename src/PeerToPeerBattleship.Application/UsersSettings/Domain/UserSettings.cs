@@ -4,9 +4,9 @@ namespace PeerToPeerBattleship.Application.UsersSettings.Domain
 {
     public class UserSettings
     {
-        public bool ShowApplicationInitialDisplay { get; set; }
-        public MatchExpiresIn MatchExpiresIn { get; set; }
-        public Connection Connection { get; set; }
+        public bool ShowApplicationInitialDisplay { get; set; } = true;
+        public MatchExpiresIn MatchExpiresIn { get; set; } = new MatchExpiresIn();
+        public Connection Connection { get; set; } = new Connection();
 
         [JsonConstructor]
         public UserSettings(bool showApplicationInitialDisplay, MatchExpiresIn matchExpiresIn, Connection connection)
@@ -20,14 +20,41 @@ namespace PeerToPeerBattleship.Application.UsersSettings.Domain
         {
             return new UserSettings(ShowApplicationInitialDisplay,
                 new MatchExpiresIn(MatchExpiresIn.Value, MatchExpiresIn.Time),
-                new Connection(Connection.MaxRetriesAmount));
+                new Connection(Connection.MaxRetriesAmount, Connection.Port));
+        }
+
+        public UserSettings()
+        {
+        }
+
+        public bool Equals(UserSettings other)
+        {
+            if (other == null) return false;
+
+            return ShowApplicationInitialDisplay == other.ShowApplicationInitialDisplay &&
+                   MatchExpiresIn.Equals(other.MatchExpiresIn) &&
+                   Connection.Equals(other.Connection);
+        }
+
+        public override bool Equals(object obj)
+        {
+            return Equals(obj as UserSettings);
+        }
+
+        public override int GetHashCode()
+        {
+            return HashCode.Combine(
+                ShowApplicationInitialDisplay,
+                MatchExpiresIn,
+                Connection
+            );
         }
     }
 
     public class MatchExpiresIn
     {
-        public int Value { get; set; }
-        public string Time { get; set; }
+        public int Value { get; set; } = 15;
+        public string Time { get; set; } = "MINUTOS";
 
         private readonly string[] ValidTimesMesurements = ["ANOS", "MESES", "DIAS", "HORAS", "MINUTOS", "SEGUNDOS"];
 
@@ -36,6 +63,10 @@ namespace PeerToPeerBattleship.Application.UsersSettings.Domain
         {
             Value=value;
             Time=time;
+        }
+
+        public MatchExpiresIn()
+        {
         }
 
         public void Validate()
@@ -65,16 +96,56 @@ namespace PeerToPeerBattleship.Application.UsersSettings.Domain
         {
             return ValidTimesMesurements;
         }
+
+        public bool Equals(MatchExpiresIn other)
+        {
+            if (other == null) return false;
+
+            return Value == other.Value && string.Equals(Time, other.Time, StringComparison.OrdinalIgnoreCase);
+        }
+
+        public override bool Equals(object obj)
+        {
+            return Equals(obj as MatchExpiresIn);
+        }
+
+        public override int GetHashCode()
+        {
+            return HashCode.Combine(Value, Time?.ToLowerInvariant());
+        }
     }
 
     public class Connection
     {
-        public int MaxRetriesAmount { get; set; }
+        public int MaxRetriesAmount { get; set; } = 10;
+        public short Port { get; set; } = 8080;
 
         [JsonConstructor]
-        public Connection(int maxRetriesAmount)
+        public Connection(int maxRetriesAmount, short port)
         {
-            MaxRetriesAmount=maxRetriesAmount;
+            MaxRetriesAmount = maxRetriesAmount;
+            Port = port;
+        }
+
+        public Connection()
+        {
+        }
+
+        public bool Equals(Connection other)
+        {
+            if (other == null) return false;
+
+            return MaxRetriesAmount == other.MaxRetriesAmount && Port == other.Port;
+        }
+
+        public override bool Equals(object obj)
+        {
+            return Equals(obj as Connection);
+        }
+
+        public override int GetHashCode()
+        {
+            return HashCode.Combine(MaxRetriesAmount, Port);
         }
     }
 }

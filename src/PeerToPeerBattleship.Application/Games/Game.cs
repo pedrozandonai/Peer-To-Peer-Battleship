@@ -106,11 +106,9 @@ namespace PeerToPeerBattleship.Application.Games
         {
             await ConsoleExtension.ClearAsync();
 
-            short port = _userInputHandler.ReadShort("Digite a porta para iniciar o servidor: ");
-
             if (!_applicationSettings.GameTestMode)
             {
-                await _sock.StartServerAsync(port);
+                await _sock.StartServerAsync(_userSettings.Connection.Port);
 
                 _sock.MessageReceived += OnMessageReceived;
                 _sock.ConnectionClosed += OnConnectionClosed;
@@ -125,14 +123,12 @@ namespace PeerToPeerBattleship.Application.Games
             await ConsoleExtension.ClearAsync();
 
             string remoteIp = string.Empty;
-            short port = 0;
 
             remoteIp = _userInputHandler.ReadIpAddress("Digite o IP do servidor: ");
-            port = _userInputHandler.ReadShort("Digite a porta do servidor: ");
 
             if (!_applicationSettings.GameTestMode)
             {
-                await _sock.ConnectToServerAsync(remoteIp, port);
+                await _sock.ConnectToServerAsync(remoteIp, _userSettings.Connection.Port);
 
                 _sock.MessageReceived += OnMessageReceived;
                 _sock.ConnectionClosed += OnConnectionClosed;
@@ -265,9 +261,10 @@ namespace PeerToPeerBattleship.Application.Games
                 {
                     Match = Match.Create(_sock.LocalMachineIP, _sock.RemoteMachineIp, _userInputHandler, _userSettings);
                     await Match.ShipsCreationMethod();
-                    Match.DisplayBoard(Match.UserBoard);
                 }
             }
+
+            Match.DisplayBoard(Match.UserBoard);
 
             Match.SelectedPort = _sock.SelectedPort;
 
@@ -298,15 +295,15 @@ namespace PeerToPeerBattleship.Application.Games
 
                     Match.DisplayBoards(Match.UserBoard, Match.EnemyBoard);
 
-                    var attackPosition = Match.AttackEnemyShip();
+                    var attackedPosition = Match.AttackEnemyShip();
 
                     await ConsoleExtension.ClearAsync();
 
-                    Console.WriteLine(Match.EnemyBoard.Attack(attackPosition.X, attackPosition.Y));
+                    Console.WriteLine(Match.EnemyBoard.Attack(attackedPosition.X, attackedPosition.Y));
 
                     Match.DisplayBoards(Match.UserBoard, Match.EnemyBoard);
 
-                    await _sock.SendMessageAsync(string.Format("{0}{1}", attackPosition.X, attackPosition.Y));
+                    await _sock.SendMessageAsync(string.Format("{0}{1}", attackedPosition.X, attackedPosition.Y));
 
                     if (Match.EnemyBoard.AllShipsSunk)
                     {
@@ -359,7 +356,7 @@ namespace PeerToPeerBattleship.Application.Games
 
                 try
                 {
-                    var enemyShipsDto = Ship.DeserializeShips(message);
+                    var enemyShipsDto = Ship.DeserializeShipsDto(message);
                     if (enemyShipsDto != null
                         && enemyShipsDto.Any())
                     {
