@@ -96,6 +96,23 @@ namespace PeerToPeerBattleship.Application.UsersSettings.Domain
         {
             return ValidTimesMesurements;
         }
+
+        public bool Equals(MatchExpiresIn other)
+        {
+            if (other == null) return false;
+
+            return Value == other.Value && string.Equals(Time, other.Time, StringComparison.OrdinalIgnoreCase);
+        }
+
+        public override bool Equals(object obj)
+        {
+            return Equals(obj as MatchExpiresIn);
+        }
+
+        public override int GetHashCode()
+        {
+            return HashCode.Combine(Value, Time?.ToLowerInvariant());
+        }
     }
 
     public class Connection
@@ -112,6 +129,23 @@ namespace PeerToPeerBattleship.Application.UsersSettings.Domain
 
         public Connection()
         {
+        }
+
+        public bool Equals(Connection other)
+        {
+            if (other == null) return false;
+
+            return MaxRetriesAmount == other.MaxRetriesAmount && Port == other.Port;
+        }
+
+        public override bool Equals(object obj)
+        {
+            return Equals(obj as Connection);
+        }
+
+        public override int GetHashCode()
+        {
+            return HashCode.Combine(MaxRetriesAmount, Port);
         }
     }
 }
