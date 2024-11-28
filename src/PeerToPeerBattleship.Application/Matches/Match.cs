@@ -151,6 +151,9 @@ namespace PeerToPeerBattleship.Application.Matches
         {
             int cellWidth = 3; // Largura de cada célula
 
+            // Indicação dos tabuleiros
+            Console.WriteLine("    Seu tabuleiro:".PadRight(10 * cellWidth) + "   " + "    Tabuleiro do inimigo:");
+
             // Linha superior (delimitador horizontal)
             Console.WriteLine("   " + new string('-', 10 * cellWidth + 1) + "   " + new string('-', 10 * cellWidth + 1));
 
