@@ -1,7 +1,7 @@
 ﻿using PeerToPeerBattleship.Application.Boards.Domain;
 using PeerToPeerBattleship.Application.Ships.Domain;
 using PeerToPeerBattleship.Application.Ships.Model;
-using PeerToPeerBattleship.Core.Configurations;
+using PeerToPeerBattleship.Application.UsersSettings.Domain;
 using PeerToPeerBattleship.Core.Extensions;
 using PeerToPeerBattleship.Core.Inputs.Abstractions;
 using System.Text.Json;
@@ -32,8 +32,10 @@ namespace PeerToPeerBattleship.Application.Matches
             new("Destróier", 2),
             new("Destróier", 2)
         ];
-        public ApplicationSettings ApplicationSettings { get; set; }
         public string Host { get; set; }
+
+        [JsonIgnore]
+        private readonly UserSettings _userSettings;
 
         [JsonConstructor]
         public Match(Guid id, string ipTurn, string? localMachineIp, string? remoteMachineIp, Board userBoard, Board enemyBoard, IUserInputHandler? userInputHandler, bool isMatchOver, DateTime creationDateTime, string matchWinnerIp, short selectedPort, string host)
@@ -52,7 +54,7 @@ namespace PeerToPeerBattleship.Application.Matches
             Host = host;
         }
 
-        private Match(string? localMachineIp, string? remoteMachineIp, IUserInputHandler userInputHandler, bool isMatchOver, ApplicationSettings applicationSettings)
+        private Match(string? localMachineIp, string? remoteMachineIp, IUserInputHandler userInputHandler, bool isMatchOver, UserSettings userSettings)
         {
             Id = Guid.CreateVersion7();
             LocalMachineIp = localMachineIp;
@@ -60,11 +62,11 @@ namespace PeerToPeerBattleship.Application.Matches
             UserInputHandler = userInputHandler;
             IsMatchOver = isMatchOver;
             CreationDateTime = DateTime.Now;
-            ApplicationSettings = applicationSettings;
+            _userSettings = userSettings;
         }
 
-        public static Match Create(string localMachineIp, string remoteMachineIp, IUserInputHandler userInputHandler, ApplicationSettings applicationSettings)
-            => new(localMachineIp, remoteMachineIp, userInputHandler, false, applicationSettings);
+        public static Match Create(string localMachineIp, string remoteMachineIp, IUserInputHandler userInputHandler, UserSettings userSettings)
+            => new(localMachineIp, remoteMachineIp, userInputHandler, false, userSettings);
 
         public Board GenerateRandomPositions()
         {
@@ -148,6 +150,9 @@ namespace PeerToPeerBattleship.Application.Matches
         public static void DisplayBoards(Board userBoard, Board enemyBoard)
         {
             int cellWidth = 3; // Largura de cada célula
+
+            // Indicação dos tabuleiros
+            Console.WriteLine("    Seu tabuleiro:".PadRight(10 * cellWidth) + "   " + "    Tabuleiro do inimigo:");
 
             // Linha superior (delimitador horizontal)
             Console.WriteLine("   " + new string('-', 10 * cellWidth + 1) + "   " + new string('-', 10 * cellWidth + 1));
@@ -420,6 +425,14 @@ namespace PeerToPeerBattleship.Application.Matches
             Console.WriteLine("*------------------------------------------------------------------*");
             var attackPosition = UserInputHandler!.ReadPositions("    Digite a coordenada (formato X,Y): ");
 
+            if(UserAlreadyAtackedThisPosition(attackPosition))
+            {
+                ConsoleExtension.Clear();
+                Console.WriteLine("Você já atacou essa posição, digite outra posição.");
+                Match.DisplayBoards(UserBoard, EnemyBoard);
+                return AttackEnemyShip();
+            }
+
             return attackPosition;
         }
 
@@ -445,11 +458,11 @@ namespace PeerToPeerBattleship.Application.Matches
             }
 
             string documentsPath = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
-            string folderPath = Path.Combine(documentsPath, "PeerToPeerBattleShip");
+            string folderPath = Path.Combine(documentsPath, Path.Combine("PeerToPeerBattleShip", "matches"));
 
             Directory.CreateDirectory(folderPath);
 
-            string fileName = $"{CreationDateTime:yyyy-MM-dd_HH-mm-ss}_{RemoteMachineIp}.txt";
+            string fileName = $"{Id}.txt";
             string filePath = Path.Combine(folderPath, fileName);
 
             string jsonContent = JsonSerializer.Serialize(this, new JsonSerializerOptions
@@ -473,12 +486,12 @@ namespace PeerToPeerBattleship.Application.Matches
             return JsonSerializer.Deserialize<Match>(jsonContent) ?? throw new InvalidOperationException("Erro ao tentar desesserializar o arquivo indicado.");
         }
 
-        public static Match? FindAndLoadUnfinishedMatch(string directoryPath, ApplicationSettings applicationSettings)
+        public static Match? FindAndLoadUnfinishedMatch(string directoryPath, UserSettings userSettings)
         {
             string[] files;
             try
             {
-                files = Directory.GetFiles(directoryPath, "*.txt");
+                files = Directory.GetFiles(Path.Combine(directoryPath, "matches"), "*.txt");
             }
             catch (Exception ex)
             {
@@ -494,9 +507,9 @@ namespace PeerToPeerBattleship.Application.Matches
 
                     if (match != null && !match.IsMatchOver)
                     {
-                        if (match.IsMatchExpired(match.CreationDateTime, applicationSettings))
+                        if (match.IsMatchExpired(match.CreationDateTime, userSettings))
                         {
-                            Console.WriteLine(string.Format("Removendo partidas com base no arquivo de configuração a cada {0} {1}", applicationSettings.MatchExpiresIn.Value, applicationSettings.MatchExpiresIn.Time));
+                            Console.WriteLine(string.Format("Removendo partidas com base no arquivo de configuração a cada {0} {1}", userSettings.MatchExpiresIn.Value, userSettings.MatchExpiresIn.Time));
                             File.Delete(file);
                             continue;
                         }
@@ -519,16 +532,16 @@ namespace PeerToPeerBattleship.Application.Matches
             return null;
         }
 
-        private bool IsMatchExpired(DateTime creationDateTime, ApplicationSettings applicationSettings)
+        private bool IsMatchExpired(DateTime creationDateTime, UserSettings userSettings)
         {
-            // Obtém a duração configurada para expiração
-            var expirationDuration = applicationSettings.MatchExpiresIn.GetMatchExpirationDuration();
+            var expirationDuration = userSettings.MatchExpiresIn.GetMatchExpirationDuration();
 
-            // Calcula o horário de expiração com base no tempo de criação
             var expirationDateTime = creationDateTime.Add(expirationDuration);
 
-            // Compara com a data e hora atuais
             return DateTime.Now > expirationDateTime;
         }
+
+        public bool UserAlreadyAtackedThisPosition((int X, int Y) atackedPosition)
+            => EnemyBoard.ShotsFired.Contains(atackedPosition);
     }
 }

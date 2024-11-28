@@ -33,7 +33,7 @@ namespace PeerToPeerBattleship.Infraestructure.Networking
             {
                 TcpListener listener = new TcpListener(IPAddress.Any, port);
                 listener.Start();
-                _logger.Information("Servidor iniciado na porta {0}. Aguardando por conexões...", port);
+                _logger.Information("Servidor iniciado no IP: {0} na porta {1}. Aguardando por conexões...", LocalMachineIP, port);
 
                 _client = await listener.AcceptTcpClientAsync();
                 RemoteMachineIp = ((IPEndPoint)_client.Client.RemoteEndPoint!).Address.ToString();
@@ -57,7 +57,7 @@ namespace PeerToPeerBattleship.Infraestructure.Networking
 
             _client = new TcpClient();
             await _client.ConnectAsync(serverIp, port);
-            _logger.Information("Conectado ao IP: {0} na Porta: {1}.", serverIp, port);
+            _logger.Information("Conectado ao IP {0} na Porta: {1}.", serverIp, port);
 
             _stream = _client.GetStream();
             _ = ReceiveMessagesAsync();

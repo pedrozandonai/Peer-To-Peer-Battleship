@@ -1,6 +1,7 @@
 ﻿using PeerToPeerBattleship.Application.Ships.Model;
 using PeerToPeerBattleship.Core.Helpers;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace PeerToPeerBattleship.Application.Ships.Domain
 {
@@ -9,8 +10,20 @@ namespace PeerToPeerBattleship.Application.Ships.Domain
         public string Name { get; }
         public EShipType ShipType { get; }
         public int Size { get; }
+
+        [JsonIgnore]
         public List<(int X, int Y)> Positions { get; private set; }
+        [JsonIgnore]
         public HashSet<(int X, int Y)> Hits { get; private set; }
+
+        // Propriedades para serialização
+        public List<List<int>> SerializablePositions => Positions
+            .Select(position => new List<int> { position.X, position.Y })
+            .ToList();
+
+        public List<List<int>> SerializableHits => Hits
+            .Select(hit => new List<int> { hit.X, hit.Y })
+            .ToList();
 
         public Ship(string name, int size)
         {
@@ -62,7 +75,7 @@ namespace PeerToPeerBattleship.Application.Ships.Domain
                 Name.RemoveAccent().ToLower(),
                 Positions.Select(position => new List<int> { position.X, position.Y }).ToList());
 
-        public static List<Ship> DeserializeShips(string json)
+        public static List<Ship> DeserializeShipsDto(string json)
         {
             // Desserializa diretamente a lista de ShipDto
             var shipDtos = JsonSerializer.Deserialize<List<ShipDto>>(json);
@@ -91,6 +104,45 @@ namespace PeerToPeerBattleship.Application.Ships.Domain
                 "destroier" => "Destróier",
                 _ => throw new ArgumentException($"Tipo de navio inválido: {tipo}")
             };
+        }
+
+        // Método para salvar os dados no JSON (com posições e hits serializáveis)
+        public string SerializeShip()
+        {
+            return JsonSerializer.Serialize(new
+            {
+                Name,
+                ShipType,
+                Size,
+                Positions = SerializablePositions,
+                Hits = SerializableHits,
+                IsSunk
+            });
+        }
+
+        // Método para desserializar diretamente para a classe Ship
+        public static Ship DeserializeShip(string json)
+        {
+            var data = JsonSerializer.Deserialize<SerializedShip>(json);
+            if (data == null)
+                throw new InvalidOperationException("Failed to deserialize JSON.");
+
+            var ship = new Ship(data.Name, data.Size)
+            {
+                Positions = data.Positions.Select(pos => (pos[0], pos[1])).ToList(),
+                Hits = new HashSet<(int X, int Y)>(data.Hits.Select(hit => (hit[0], hit[1])))
+            };
+
+            return ship;
+        }
+
+        sealed class SerializedShip
+        {
+            public string Name { get; set; }
+            public EShipType ShipType { get; set; }
+            public int Size { get; set; }
+            public List<List<int>> Positions { get; set; }
+            public List<List<int>> Hits { get; set; }
         }
     }
 }

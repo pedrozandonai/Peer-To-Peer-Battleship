@@ -4,25 +4,59 @@ namespace PeerToPeerBattleship.Application.UsersSettings.Domain
 {
     public class UserSettings
     {
-        public bool SkipApplicationLogo { get; set; }
-        public MatchExpiresIn MatchExpiresIn { get; set; }
-        public Connection Connection { get; set; }
+        public bool ShowApplicationInitialDisplay { get; set; } = true;
+        public MatchExpiresIn MatchExpiresIn { get; set; } = new MatchExpiresIn();
+        public Connection Connection { get; set; } = new Connection();
 
         [JsonConstructor]
-        public UserSettings(bool skipApplicationLogo, MatchExpiresIn matchExpiresIn, Connection connection)
+        public UserSettings(bool showApplicationInitialDisplay, MatchExpiresIn matchExpiresIn, Connection connection)
         {
-            SkipApplicationLogo=skipApplicationLogo;
-            MatchExpiresIn=matchExpiresIn;
-            Connection=connection;
+            ShowApplicationInitialDisplay = showApplicationInitialDisplay;
+            MatchExpiresIn = matchExpiresIn;
+            Connection = connection;
+        }
+
+        public UserSettings Clone()
+        {
+            return new UserSettings(ShowApplicationInitialDisplay,
+                new MatchExpiresIn(MatchExpiresIn.Value, MatchExpiresIn.Time),
+                new Connection(Connection.MaxRetriesAmount, Connection.Port));
+        }
+
+        public UserSettings()
+        {
+        }
+
+        public bool Equals(UserSettings other)
+        {
+            if (other == null) return false;
+
+            return ShowApplicationInitialDisplay == other.ShowApplicationInitialDisplay &&
+                   MatchExpiresIn.Equals(other.MatchExpiresIn) &&
+                   Connection.Equals(other.Connection);
+        }
+
+        public override bool Equals(object obj)
+        {
+            return Equals(obj as UserSettings);
+        }
+
+        public override int GetHashCode()
+        {
+            return HashCode.Combine(
+                ShowApplicationInitialDisplay,
+                MatchExpiresIn,
+                Connection
+            );
         }
     }
 
     public class MatchExpiresIn
     {
-        public int Value { get; set; }
-        public string Time { get; set; } = string.Empty;
+        public int Value { get; set; } = 15;
+        public string Time { get; set; } = "MINUTOS";
 
-        private readonly string[] ValidTimes = ["years", "months", "days", "hours", "minutes", "seconds"];
+        private readonly string[] ValidTimesMesurements = ["ANOS", "MESES", "DIAS", "HORAS", "MINUTOS", "SEGUNDOS"];
 
         [JsonConstructor]
         public MatchExpiresIn(int value, string time)
@@ -31,38 +65,87 @@ namespace PeerToPeerBattleship.Application.UsersSettings.Domain
             Time=time;
         }
 
+        public MatchExpiresIn()
+        {
+        }
+
         public void Validate()
         {
             if (string.IsNullOrWhiteSpace(Time))
                 throw new ArgumentException("Configuração de tempo de expiração dos arquivos da partida não pode ficar em branco.");
 
-            if (!ValidTimes.Any(time => time.Equals(Time, StringComparison.OrdinalIgnoreCase)))
+            if (!ValidTimesMesurements.Any(time => time.Equals(Time, StringComparison.OrdinalIgnoreCase)))
                 throw new ArgumentException("Não foi possível configurar o vencimento dos arquivos da partida.");
         }
 
         public TimeSpan GetMatchExpirationDuration()
         {
-            return Time.ToLower() switch
+            return Time switch
             {
-                "seconds" => TimeSpan.FromSeconds(Value),
-                "minutes" => TimeSpan.FromMinutes(Value),
-                "hours" => TimeSpan.FromHours(Value),
-                "days" => TimeSpan.FromDays(Value),
-                "months" => TimeSpan.FromDays(Value * 30),
-                "years" => TimeSpan.FromDays(Value * 365),
+                "SEGUNDOS" => TimeSpan.FromSeconds(Value),
+                "MINUTOS" => TimeSpan.FromMinutes(Value),
+                "HORAS" => TimeSpan.FromHours(Value),
+                "DIAS" => TimeSpan.FromDays(Value),
+                "MESES" => TimeSpan.FromDays(Value * 30),
+                "ANOS" => TimeSpan.FromDays(Value * 365),
                 _ => throw new ArgumentException("Unidade de tempo inválida para expiração.")
             };
+        }
+
+        public string[] GetValidTimeMesurements()
+        {
+            return ValidTimesMesurements;
+        }
+
+        public bool Equals(MatchExpiresIn other)
+        {
+            if (other == null) return false;
+
+            return Value == other.Value && string.Equals(Time, other.Time, StringComparison.OrdinalIgnoreCase);
+        }
+
+        public override bool Equals(object obj)
+        {
+            return Equals(obj as MatchExpiresIn);
+        }
+
+        public override int GetHashCode()
+        {
+            return HashCode.Combine(Value, Time?.ToLowerInvariant());
         }
     }
 
     public class Connection
     {
-        public int MaxRetriesAmount { get; set; }
+        public int MaxRetriesAmount { get; set; } = 10;
+        public short Port { get; set; } = 8080;
 
         [JsonConstructor]
-        public Connection(int maxRetriesAmount)
+        public Connection(int maxRetriesAmount, short port)
         {
-            MaxRetriesAmount=maxRetriesAmount;
+            MaxRetriesAmount = maxRetriesAmount;
+            Port = port;
+        }
+
+        public Connection()
+        {
+        }
+
+        public bool Equals(Connection other)
+        {
+            if (other == null) return false;
+
+            return MaxRetriesAmount == other.MaxRetriesAmount && Port == other.Port;
+        }
+
+        public override bool Equals(object obj)
+        {
+            return Equals(obj as Connection);
+        }
+
+        public override int GetHashCode()
+        {
+            return HashCode.Combine(MaxRetriesAmount, Port);
         }
     }
 }

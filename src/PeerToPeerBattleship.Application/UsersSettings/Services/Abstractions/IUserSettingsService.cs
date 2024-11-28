@@ -2,9 +2,11 @@
 
 namespace PeerToPeerBattleship.Application.UsersSettings.Services.Abstractions
 {
-    public interface ISaveSettingsService
+    public interface IUserSettingsService
     {
+        bool UserSettingsAlreadyExists();
+        UserSettings CreateAndSaveDefaultUserSettings();
+        UserSettings GetOrCreateUserSettings();
         void SaveUserSettings(UserSettings userSettings);
-        bool VerifyIfUserAlreadyHasSettings();
     }
 }
