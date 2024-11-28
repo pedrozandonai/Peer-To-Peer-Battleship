@@ -106,11 +106,9 @@ namespace PeerToPeerBattleship.Application.Games
         {
             await ConsoleExtension.ClearAsync();
 
-            short port = _userInputHandler.ReadShort("Digite a porta para iniciar o servidor: ");
-
             if (!_applicationSettings.GameTestMode)
             {
-                await _sock.StartServerAsync(port);
+                await _sock.StartServerAsync(_userSettings.Connection.Port);
 
                 _sock.MessageReceived += OnMessageReceived;
                 _sock.ConnectionClosed += OnConnectionClosed;
@@ -125,14 +123,12 @@ namespace PeerToPeerBattleship.Application.Games
             await ConsoleExtension.ClearAsync();
 
             string remoteIp = string.Empty;
-            short port = 0;
 
             remoteIp = _userInputHandler.ReadIpAddress("Digite o IP do servidor: ");
-            port = _userInputHandler.ReadShort("Digite a porta do servidor: ");
 
             if (!_applicationSettings.GameTestMode)
             {
-                await _sock.ConnectToServerAsync(remoteIp, port);
+                await _sock.ConnectToServerAsync(remoteIp, _userSettings.Connection.Port);
 
                 _sock.MessageReceived += OnMessageReceived;
                 _sock.ConnectionClosed += OnConnectionClosed;
